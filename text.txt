@@ -1,0 +1,12 @@
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+public interface EventLogRepository extends JpaRepository<EventLog, Long> {
+
+    @Query(value = "SELECT DISTINCT s.name AS solutionName, e.event_type AS eventType, e.created_date AS eventCreatedDate, e.path AS path, e.user_name AS changedBy, e.old_value AS oldValue, e.new_value AS newValue, c.full_path AS fullPathName, CASE WHEN s.leanix_solution_id = e.leanix_id THEN 'Solution' ELSE NULL END AS assetType FROM leanix_event_log e INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id INNER JOIN leanix_capability_solution_relation r ON r.leanix_capability_id = s.leanix_capability_id INNER JOIN capability_view c ON c.leanix_id = e.leanix_id WHERE e.active = true AND ( e.path LIKE '%/relationToCapability%' OR e.path LIKE '%/relationToBusinessCapability%' OR e.path LIKE '%/relationCapabilityToSolution%' )",
+            countQuery = "SELECT COUNT(DISTINCT e.id) FROM leanix_event_log e INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id INNER JOIN leanix_capability_solution_relation r ON r.leanix_capability_id = s.leanix_capability_id INNER JOIN capability_view c ON c.leanix_id = e.leanix_id WHERE e.active = true AND ( e.path LIKE '%/relationToCapability%' OR e.path LIKE '%/relationToBusinessCapability%' OR e.path LIKE '%/relationCapabilityToSolution%' )",
+            nativeQuery = true)
+    Page<EventLogProjection> getEventLogData(Pageable pageable);
+}
