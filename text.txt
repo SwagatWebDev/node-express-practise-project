@@ -3,7 +3,7 @@ private String removeContentInsideParentheses(String text) {
         int start = text.indexOf("(");
         int end = text.indexOf(")");
 
-        // Remove content inside parentheses along with surrounding white spaces
+        // Remove content inside parentheses along with parentheses
         String contentInsideParentheses = text.substring(start + 1, end).trim();
 
         // Remove any white spaces
@@ -12,7 +12,8 @@ private String removeContentInsideParentheses(String text) {
         // Remove any special characters like \
         contentInsideParentheses = contentInsideParentheses.replaceAll("[^a-zA-Z0-9]", "");
 
-        return text.substring(0, start) + " " + contentInsideParentheses + " " + text.substring(end + 1);
+        // Combine the result
+        return text.substring(0, start).trim() + contentInsideParentheses + text.substring(end + 1).trim();
     }
     return text;
 }
