@@ -6,8 +6,8 @@ private String removeContentInsideParentheses(String text) {
         // Remove content inside parentheses along with parentheses
         String contentInsideParentheses = text.substring(start + 1, end).trim();
 
-        // Remove white spaces and special characters like \
-        contentInsideParentheses = contentInsideParentheses.replaceAll("\\s+|\\\\", "");
+        // Remove any white spaces
+        contentInsideParentheses = contentInsideParentheses.replaceAll("\\s", "");
 
         // Combine the result
         return text.substring(0, start).trim() + contentInsideParentheses + text.substring(end + 1).trim();
