@@ -12,7 +12,7 @@ private String removeContentInsideParentheses(String text) {
         // Remove any special characters like \
         contentInsideParentheses = contentInsideParentheses.replaceAll("[^a-zA-Z0-9]", "");
 
-        return text.substring(0, start).trim() + " " + contentInsideParentheses + " " + text.substring(end + 1).trim();
+        return text.substring(0, start) + " " + contentInsideParentheses + " " + text.substring(end + 1);
     }
     return text;
 }
