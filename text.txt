@@ -9,6 +9,9 @@ private String removeContentInsideParentheses(String text) {
         // Remove any white spaces
         contentInsideParentheses = contentInsideParentheses.replaceAll("\\s", "");
 
+        // Remove any special characters like \
+        contentInsideParentheses = contentInsideParentheses.replaceAll("[^a-zA-Z0-9]", "");
+
         // Combine the result
         return text.substring(0, start).trim() + contentInsideParentheses + text.substring(end + 1).trim();
     }
