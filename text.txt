@@ -1,28 +1,18 @@
-import java.util.List;
-import java.util.stream.Collectors;
+private String removeContentInsideParentheses(String text) {
+    if (text != null && text.contains("(") && text.contains(")")) {
+        int start = text.indexOf("(");
+        int end = text.indexOf(")");
 
-@Service
-public class EventLogService {
+        // Remove content inside parentheses along with surrounding white spaces
+        String contentInsideParentheses = text.substring(start + 1, end).trim();
 
-    private final EventLogRepository eventLogRepository;
+        // Remove any white spaces
+        contentInsideParentheses = contentInsideParentheses.replaceAll("\\s+", "");
 
-    public PaginationResult<EventLogDto> getEventLog(int page, int size) {
-        List<EventLogProjection> eventLogData = eventLogRepository.getEventLogData();
+        // Remove any special characters like \
+        contentInsideParentheses = contentInsideParentheses.replaceAll("[^a-zA-Z0-9]", "");
 
-        // Manually perform pagination
-        int start = page * size;
-        int end = Math.min((page + 1) * size, eventLogData.size());
-
-        List<EventLogDto> eventLogDtos = eventLogData.subList(start, end).stream()
-                .map(this::mapToEventLogDto)
-                .collect(Collectors.toList());
-
-        // Return the result along with the total count
-        return new PaginationResult<>(eventLogDtos, eventLogData.size());
+        return text.substring(0, start).trim() + " " + contentInsideParentheses + " " + text.substring(end + 1).trim();
     }
-
-    private EventLogDto mapToEventLogDto(EventLogProjection event) {
-        // Your mapping logic here
-        return null; // Placeholder
-    }
+    return text;
 }
