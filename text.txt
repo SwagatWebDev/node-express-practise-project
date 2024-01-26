@@ -1,4 +1,4 @@
-WITH ranked_events AS (
+WITH filtered_events AS (
   SELECT
     s.name AS solutionName,
     e.event_type AS eventType,
@@ -8,7 +8,7 @@ WITH ranked_events AS (
     e.old_value AS oldValue,
     e.new_value AS newValue,
     c.full_path AS fullPathName,
-    ROW_NUMBER() OVER (PARTITION BY s.name ORDER BY e.created_date DESC) AS rnk
+    ROW_NUMBER() OVER (PARTITION BY s.name ORDER BY DATE(e.created_date) DESC, e.created_date DESC) AS rnk
   FROM
     leanix_event_log e
     INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
@@ -17,31 +17,30 @@ WITH ranked_events AS (
   WHERE
     e.active = true
     AND (
-      LOWER(e.path) LIKE '%/relationcapabilitytosolution%'
-      OR LOWER(e.path) LIKE '%/relationsolutiontocapability%'
-      OR LOWER(e.path) LIKE '%/relationtobusinesscapability%'
+      e.path LIKE '/relationCapabilityToSolution/usageDisposition'
+      OR e.path LIKE '/relationSolutionToCapability/usageDisposition'
+      OR e.path LIKE '/relationToBusinessCapability/usageDisposition'
     )
 )
 
 SELECT
   solutionName,
   eventType,
-  MAX(eventCreatedDate) AS eventCreatedDate,
-  MAX(path) AS path,
-  MAX(changedBy) AS changedBy,
-  MAX(oldValue) AS oldValue,
-  MAX(newValue) AS newValue,
-  MAX(fullPathName) AS fullPathName,
+  eventCreatedDate,
+  path,
+  changedBy,
+  oldValue,
+  newValue,
+  fullPathName,
   CASE
     WHEN solutionName IN (SELECT DISTINCT name FROM "Event Log Solution") THEN 'Solution'
     ELSE NULL -- or provide a default value if needed
   END AS assetType
 FROM
-  ranked_events
+  filtered_events
 WHERE
-  rnk = 1
-GROUP BY
-  solutionName, eventType;
+  rnk = 1;
+
 
 
 
