@@ -1,14 +1,8 @@
-WITH filtered_events AS (
+WITH LatestEvents AS (
   SELECT
     s.name AS solutionName,
-    e.event_type AS eventType,
-    e.created_date AS eventCreatedDate,
-    e.path AS path,
-    e.user_name AS changedBy,
-    e.old_value AS oldValue,
-    e.new_value AS newValue,
-    c.full_path AS fullPathName,
-    ROW_NUMBER() OVER (PARTITION BY s.name ORDER BY DATE(e.created_date) DESC, e.created_date DESC) AS rnk
+    e.path,
+    MAX(e.eventCreatedDate) AS latestEventCreatedDate
   FROM
     leanix_event_log e
     INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
@@ -17,29 +11,36 @@ WITH filtered_events AS (
   WHERE
     e.active = true
     AND (
-      e.path LIKE '/relationCapabilityToSolution/usageDisposition'
-      OR e.path LIKE '/relationSolutionToCapability/usageDisposition'
-      OR e.path LIKE '/relationToBusinessCapability/usageDisposition'
+      e.path LIKE '%/relationToCapability%'
+      OR e.path LIKE '%/relationToBusinessCapability%'
+      OR e.path LIKE '%/relationCapabilityToSolution%'
     )
+  GROUP BY
+    s.name, e.path
 )
 
 SELECT
-  solutionName,
-  eventType,
-  eventCreatedDate,
-  path,
-  changedBy,
-  oldValue,
-  newValue,
-  fullPathName,
+  s.name AS solutionName,
+  e.event_type AS eventType,
+  e.eventCreatedDate,
+  e.path,
+  e.changedBy,
+  e.old_value AS oldValue,
+  e.new_value AS newValue,
+  c.full_path AS fullPathName,
   CASE
-    WHEN solutionName IN (SELECT DISTINCT name FROM "Event Log Solution") THEN 'Solution'
-    ELSE NULL -- or provide a default value if needed
+    WHEN s.leanix_solution_id = e.leanix_id THEN 'Solution'
+    ELSE NULL
   END AS assetType
 FROM
-  filtered_events
+  leanix_event_log e
+  INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
+  INNER JOIN leanix_capability_solution_relation r ON r.leanix_capability_id = s.leanix_capability_id
+  INNER JOIN capability_view c ON c.leanix_id = e.leanix_id
+  INNER JOIN LatestEvents le ON s.name = le.solutionName AND e.path = le.path AND e.eventCreatedDate = le.latestEventCreatedDate
 WHERE
-  rnk = 1;
+  e.active = true;
+
 
 
 
