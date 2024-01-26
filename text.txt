@@ -13,3 +13,47 @@ private String removeContentInsideParentheses(String text) {
     }
     return text;
 }
+
+
+WITH ranked_events AS (
+  SELECT
+    s.name AS name,
+    e.event_type AS eventType,
+    e.created_date AS eventCreatedDate,
+    e.path AS path,
+    e.user_name AS changedBy,
+    e.old_value AS oldValue,
+    e.new_value AS newValue,
+    c.full_path AS fullPathName,
+    CASE
+      WHEN s.leanix_solution_id = e.leanix_id THEN 'Solution'
+      ELSE NULL -- or provide a default value if needed
+    END AS assetType,
+    ROW_NUMBER() OVER (PARTITION BY s.name ORDER BY e.eventCreatedDate DESC) AS rn
+  FROM
+    leanix_event_log e
+    INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
+    INNER JOIN leanix_capability_solution_relation r ON r.leanix_capability_id = s.leanix_capability_id
+    INNER JOIN capability_view c ON c.leanix_id = e.leanix_id
+  WHERE
+    e.active = true
+    AND (
+      e.path LIKE '%/relationSolutionToCapability%'
+      OR e.path LIKE '%/relationToBusinessCapability%'
+      OR e.path LIKE '%/relationCapabilityToSolution%'
+    )
+)
+SELECT
+  name,
+  eventType,
+  eventCreatedDate,
+  path,
+  changedBy,
+  oldValue,
+  newValue,
+  fullPathName,
+  assetType
+FROM
+  ranked_events
+WHERE
+  rn = 1;
