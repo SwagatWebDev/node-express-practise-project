@@ -1,42 +1,50 @@
 WITH ranked_events AS (
   SELECT
-    name,
-    eventType,
-    eventCreatedDate,
-    path,
-    changedBy,
-    oldValue,
-    newValue,
-    fullPathName,
-    assetType,
-    ROW_NUMBER() OVER (PARTITION BY name, path ORDER BY eventCreatedDate DESC) AS row_num
+    s.name AS solutionName,
+    e.event_type AS eventType,
+    e.created_date AS eventCreatedDate,
+    e.path AS path,
+    e.user_name AS changedBy,
+    e.old_value AS oldValue,
+    e.new_value AS newValue,
+    c.full_path AS fullPathName,
+    CASE
+      WHEN s.leanix_solution_id = e.leanix_id THEN 'Solution'
+      ELSE NULL -- or provide a default value if needed
+    END AS assetType,
+    ROW_NUMBER() OVER (PARTITION BY s.name, e.path ORDER BY e.eventCreatedDate DESC) AS row_num
   FROM
-    "Event Log Table"
+    leanix_event_log e
+    INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
+    INNER JOIN leanix_capability_solution_relation r ON r.leanix_capability_id = s.leanix_capability_id
+    INNER JOIN capability_view c ON c.leanix_id = e.leanix_id
   WHERE
-    path IN (
-      '/relationSolutionToCapability/usageDisposition',
-      '/relationToBusinessCapability/usageDisposition',
-      '/relationCapabilityToSolution/usageDisposition'
+    e.active = true
+    AND (
+      e.path LIKE '%/relationToCapability%'
+      OR e.path LIKE '%/relationToBusinessCapability%'
+      OR e.path LIKE '%/relationCapabilityToSolution%'
     )
 )
 SELECT
-  name,
+  solutionName,
   eventType,
   MAX(eventCreatedDate) AS eventCreatedDate,
   path,
   changedBy,
-  FIRST_VALUE(oldValue) OVER (PARTITION BY name, path ORDER BY eventCreatedDate DESC) AS oldValue,
-  FIRST_VALUE(newValue) OVER (PARTITION BY name, path ORDER BY eventCreatedDate DESC) AS newValue,
-  FIRST_VALUE(fullPathName) OVER (PARTITION BY name, path ORDER BY eventCreatedDate DESC) AS fullPathName,
+  FIRST_VALUE(oldValue) OVER (PARTITION BY solutionName, path ORDER BY eventCreatedDate DESC) AS oldValue,
+  FIRST_VALUE(newValue) OVER (PARTITION BY solutionName, path ORDER BY eventCreatedDate DESC) AS newValue,
+  FIRST_VALUE(fullPathName) OVER (PARTITION BY solutionName, path ORDER BY eventCreatedDate DESC) AS fullPathName,
   assetType
 FROM
   ranked_events
 WHERE
   row_num = 1
 GROUP BY
-  name, eventType, path, changedBy, assetType
+  solutionName, eventType, path, changedBy, assetType
 ORDER BY
   eventCreatedDate DESC;
+
 
 
 Event Log Table:
@@ -76,3 +84,31 @@ Wanted record like bellow
 | Agility Health      | Solution | 2022-12-02T20:24:40.679824Z | /relationCapabilityToSolution/usageDisposition         | random     | OldValue9      | NewValue9     | /fullPathName9                  | Solution  |
 | ACID                | Solution | 2023-02-14T20:43:47.372430Z | /relationSolutionToCapability/usageDisposition         | random     |                |               | /fullPathName10                 | Solution  |
 | AAAP                | Solution | 2023-02-14T20:43:47.372430Z | /relationToBusinessCapability/usageDisposition         | random     |                | restricted    | /fullPathName10                 | Solution  |
+
+ Depends on my above requirement modify my query and give a working query to solve the Query
+
+ SELECT DISTINCT
+   s.name AS solutionName,
+   e.event_type AS eventType,
+   e.created_date AS eventCreatedDate,
+   e.path AS path,
+   e.user_name AS changedBy,
+   e.old_value AS oldValue,
+   e.new_value AS newValue,
+   c.full_path AS fullPathName,
+   CASE
+     WHEN s.leanix_solution_id = e.leanix_id THEN 'Solution'
+     ELSE NULL -- or provide a default value if needed
+   END AS assetType
+ FROM
+   leanix_event_log e
+   INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
+   INNER JOIN leanix_capability_solution_relation r ON r.leanix_capability_id = s.leanix_capability_id
+   INNER JOIN capability_view c ON c.leanix_id = e.leanix_id
+ WHERE
+   e.active = true
+   AND (
+     e.path LIKE '%/relationToCapability%'
+     OR e.path LIKE '%/relationToBusinessCapability%'
+     OR e.path LIKE '%/relationCapabilityToSolution%'
+   )
