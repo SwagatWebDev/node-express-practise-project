@@ -1,42 +1,30 @@
-WITH ranked_events AS (
-  SELECT
-    s.name AS solutionName,
-    e.event_type AS eventType,
-    e.created_date AS eventCreatedDate,
-    e.path AS path,
-    e.user_name AS changedBy,
-    e.old_value AS oldValue,
-    e.new_value AS newValue,
-    c.full_path AS fullPathName,
-    ROW_NUMBER() OVER (PARTITION BY s.name ORDER BY e.created_date DESC) AS event_rank
-  FROM
-    leanix_event_log e
-    INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
-    INNER JOIN leanix_capability_solution_relation r ON r.leanix_capability_id = s.leanix_capability_id
-    INNER JOIN capability_view c ON c.leanix_id = e.leanix_id
-  WHERE
-    e.active = true
-    AND (
-      e.path LIKE '%/relationSolutionToCapability%'
-      OR e.path LIKE '%/relationToBusinessCapability%'
-      OR e.path LIKE '%/relationCapabilityToSolution%'
-    )
-)
-SELECT
-  solutionName,
-  eventType,
-  MAX(eventCreatedDate) AS eventCreatedDate,
-  path,
-  changedBy,
-  MAX(oldValue) AS oldValue,
-  MAX(newValue) AS newValue,
-  MAX(fullPathName) AS fullPathName
+SELECT DISTINCT ON (s.name)
+   s.name AS solutionName,
+   e.event_type AS eventType,
+   e.created_date AS eventCreatedDate,
+   e.path AS path,
+   e.user_name AS changedBy,
+   e.old_value AS oldValue,
+   e.new_value AS newValue,
+   c.full_path AS fullPathName,
+   CASE
+     WHEN s.leanix_solution_id = e.leanix_id THEN 'Solution'
+     ELSE NULL -- or provide a default value if needed
+   END AS assetType
 FROM
-  ranked_events
+   leanix_event_log e
+   INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
+   INNER JOIN leanix_capability_solution_relation r ON r.leanix_capability_id = s.leanix_capability_id
+   INNER JOIN capability_view c ON c.leanix_id = e.leanix_id
 WHERE
-  event_rank = 1
-GROUP BY
-  solutionName, eventType, path, changedBy;
+   e.active = true
+   AND (
+     e.path LIKE '%/relationToCapability%'
+     OR e.path LIKE '%/relationToBusinessCapability%'
+     OR e.path LIKE '%/relationCapabilityToSolution%'
+   )
+ORDER BY s.name, e.created_date DESC;
+
 
 
 
