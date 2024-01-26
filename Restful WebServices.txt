@@ -1,0 +1,75 @@
+Restful WebServices
+---------------------
+Simple WebService means exposing Service to end user.
+Two types of WebService we have
+1. SOAP:
+-------------------
+a. SOAP Protocol
+b. XML MediaType
+c. Secure
+d. Design is complex
+   WSDL File Creation
+   Need to use wsdl2java plugin
+   Convert WSDL Object to Pojo class
+   Stub -> call the method
+
+2. REST
+--------------
+-> HTTP, HTTPS Protocol and other HTTP Versions like HTTP1, HTTP2
+
+-> XML, JSON, TEXT, HTML any MediaType
+
+-> Secure (Token based Auth need to use)
+
+-> Design is easy
+   -> Need to create Method and define HTTP Method type
+   -> Define the user access URL
+
+3 Layer Architecture
+-----------------------
+1. Web layer: End Point and HTTP methods. Generally we call this Controller/Rest Controller class
+
+2. Service layer: Business Logic. Service Class
+
+3. Database Layer: Dao Logic. We call this as Repository Class
+
+@RestController
+-----------------
+If we are using Rest Controller then from the http method what you will write, you can JSON or any
+Media Type based on your Producer and Consumer.
+
+But if we write @Controller annotation then your controller always expect you to return Model and View
+Object. If we use @Controller on top of the http method we need to write @ResponseBody,
+which is additional stuff. We need to forcefully tell to Jackson Data Binding instead of returning
+model and view just return the JSON Object
+
+In Simple word Rest Controller is a combination Controller and Response Body.
+
+As we are going to use Restful Webservice we are not going to deal with Model and View as we are not
+dealing with user interface page also. When there is no use of Model and View concept then always
+recommended to use Rest Controller for Restful WebServices.
+
+HTTP Methods:
+--------------
+GET -> Fetch/Load Resources (Get something from DB). Good to use to get resource in DB
+POST -> Create Resources (insert something in DB). Good to use to persist resource in DB
+PUT  -> Update Resources (update/modify something in DB). Good to use to update resource in DB
+DELETE -> Delete Resources (Delete something in DB). Good to use to delete resource in DB.
+          It Does Hard Delete.
+soft deletion: we just change the flag value to true or false
+hard deletion: we are completely deleting thr resource from your DB
+
+OPTION
+PATCH -> Modify Resource Partially. If you want to modify single or two Object then recommended
+to use PATCH rater than PUT. But people mostly used PUT for single and multiple Objects.
+
+Writing HTTP Method to save Course Object
+------------------------------------------
+1. Write method type and method name. Method type can be course object or ResponseEntity<?> Object
+which is recommended to use.
+
+2. Next we need to give Input as Course Object in JSON Format like from PostMan of User Interface like
+Angular and React. To give the input we need to pass the input as arguments.
+To convert JSON Object to Required Course Object we need to use @ResponseBody.
+Remember if we are using any Object as a argument we can use @ResponseBody annotation.
+This annotation will take the JSON and convert to corresponding Objects.
