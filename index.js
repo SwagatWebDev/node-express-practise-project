@@ -1,51 +1,78 @@
-const http = require('http');
 const fs = require('fs');
-const express = require('express');
-
 const index = fs.readFileSync('index.html', 'utf-8');
 const data = JSON.parse(fs.readFileSync('data.json', 'utf-8'));
 const products = data.products;
-const PORT = 8000;
 
-const app = express();
+const express = require('express');
+const morgan = require('morgan');
+const server = express();
 
-server.use((req, res, next) => {
-    console.log(req.method, req.ip, req.hostname, new Date());
-    next();
-});
+//bodyParser
+server.use(express.json());
+server.use(morgan('default'))
+server.use(express.static('public'));
 
-const auth = (req, res, next) => {
-    console.log(req.query);
-    if (req.query.password === '123') {
-      next();
-    } else {
-      res.sendStatus(401);
-    }
-    next();
+const port = 8000;
 
-};
 
-// server.use(auth);
+
 
 // API - Endpoint - Route
 
-server.get('/', auth, (req, res) => {
-    res.json({ type: 'GET' });
+// Products
+// API ROOT , base URL, example - google.com/api/v2/
+
+// Read GET /products
+server.get('/products', (req, res) => {
+    res.json(products);
 });
-server.post('/', auth, (req, res) => {
-    res.json({ type: 'POST' });
+
+// Read GET /products/:id
+server.get('/products/:id', (req, res) => {
+    const id = +req.params.id;
+    const product = products.find(p=>p.id===id)
+    res.json(product);
 });
-server.put('/', (req, res) => {
-    res.json({ type: 'PUT' });
+
+//Create POST /products     C R U D
+server.post('/products', (req, res) => {
+    console.log(req.body);
+    products.push(req.body);
+    res.status(201).json(req.body);
 });
-server.delete('/', (req, res) => {
-    res.json({ type: 'DELETE' });
-});
-server.patch('/', (req, res) => {
-    res.json({ type: 'PATCH' });
+
+// Update PUT /products/:id
+server.put('/products/:id', (req, res) => {
+    const id = +req.params.id;
+    const productIndex = products.findIndex(p=>p.id===id)
+    products.splice(productIndex,1,{...req.body, id:id})
+    res.status(201).json();
 });
 
 
-server.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+// Update PATCH /products/:id
+server.patch('/products/:id', (req, res) => {
+    const id = +req.params.id;
+    const productIndex = products.findIndex(p=>p.id===id)
+    const product = products[productIndex];
+    products.splice(productIndex,1,{...product,...req.body})
+    res.status(201).json();
+});
+
+// Difference of Patch here whatever dat you want to update those will be updated other data will not affect
+// PUT will reformat your data depends on your payload
+
+// Delete DELETE /products/:id
+server.delete('/products/:id', (req, res) => {
+    const id = +req.params.id;
+    const productIndex = products.findIndex(p=>p.id===id)
+    const product = products[productIndex];
+    products.splice(productIndex,1)
+    res.status(201).json(product);
+});
+
+;
+
+server.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}`);
 });
