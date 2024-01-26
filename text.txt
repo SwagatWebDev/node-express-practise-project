@@ -1,16 +1,78 @@
-private String extractValueFromBusinessCapability(String text) {
-    if (text != null) {
-        Pattern pattern = Pattern.compile("BusinessCapability : \"(.*?)\"");
-        Matcher matcher = pattern.matcher(text);
+WITH ranked_events AS (
+  SELECT
+    name,
+    eventType,
+    eventCreatedDate,
+    path,
+    changedBy,
+    oldValue,
+    newValue,
+    fullPathName,
+    assetType,
+    ROW_NUMBER() OVER (PARTITION BY name, path ORDER BY eventCreatedDate DESC) AS row_num
+  FROM
+    "Event Log Table"
+  WHERE
+    (
+      path IN (
+        '/relationCapabilityToSolution/usageDisposition',
+        '/relationSolutionToCapability/usageDisposition',
+        '/relationToBusinessCapability/usageDisposition'
+      )
+      OR path NOT LIKE '/relation%'
+    )
+)
+SELECT
+  name,
+  eventType,
+  eventCreatedDate,
+  path,
+  changedBy,
+  oldValue,
+  newValue,
+  fullPathName,
+  assetType
+FROM
+  ranked_events
+WHERE
+  row_num = 1;
 
-        String result = matcher.find() ? matcher.group(1) : text;
 
-        // Check if the final text contains "[Deleted Fact Sheet]"
-        if (result != null && result.contains("[Deleted Fact Sheet]")) {
-            return null;
-        }
+Event Log Table:
 
-        return result;
-    }
-    return text;
-}
+| name                | eventType| eventCreatedDate            | path                                                   | changedBy  | oldValue       | newValue      | fullPathName                    | assetType |
+|---------------------|----------|-----------------------------|---------------------------------------------------------------------|----------------|---------------|---------------------------------|-----------|
+| Active MQ Artemis   | Solution | 2022-12-02T20:27:31.343570Z | /relationSolutionToBusinessCapability/usageDisposition | random     | restricted     | emerging      | /fullPathName1                  | Solution  |
+| Active MQ Artemis   | Solution | 2022-12-02T20:27:32.663394Z | /relationSolutionToBusinessCapability/usageDisposition | random     | emerging       | emerging      | /fullPathName2                  | Solution  |
+| Active MQ Artemis   | Solution | 2022-12-02T16:08:52.822511Z | /relationSolutionToCapability/usageDisposition         | random     | restricted     | preferred     | /fullPathName3                  | Solution  |
+| Active MQ Artemis   | Solution | 2022-12-02T20:20:31.891081Z | /relationSolutionToCapability/usageDisposition         | random     | preferred      | preferred      | /fullPathName4                  | Solution  |
+| Active MQ Artemis   | Solution | 2022-12-02T20:00:47.012142Z | /relationSolutionToCapability/usageDisposition         | random     | preferred      | emerging      | /fullPathName5                  | Solution  |
+| AI / Data Science   | Solution | 2023-02-14T20:43:47.372430Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | restricted    | /fullPathName6                  | Solution  |
+| AI / Data Science   | Solution | 2023-02-14T20:43:58.450240Z | /relationSolutionToBusinessCapability/usageDisposition | random     | restricted     | restricted    | /fullPathName7                  | Solution  |
+| AI / Data Science   | Solution | 2023-02-14T20:44:12.372430Z | /relationSolutionToBusinessCapability/usageDisposition | random     | preferred      | restricted    | /fullPathName8                  | Solution  |
+| Apache NiFi         | Solution | 2021-07-09T19:55:48.191218Z | /relationCapabilityToSolution/usageDisposition         | random     | required       | restricted    | /fullPathName9                  | Solution  |
+| Apache NiFi         | Solution | 2021-07-09T19:55:52.563189Z | /relationCapabilityToSolution/usageDisposition         | random     | decommission   | restricted    | /fullPathName10                 | Solution  |
+| Apache NiFi         | Solution | 2022-12-02T20:28:46.704615Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | restricted    | /fullPathName1                  | Solution  |
+| Apache NiFi         | Solution | 2022-12-02T20:28:48.191218Z | /relationSolutionToBusinessCapability/usageDisposition | random     | preferred      | restricted    | /fullPathName2                  | Solution  |
+| Event Log Solution  | Solution | 2024-01-24T12:07:29.012142Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | preferred     | /fullPathName3                  | Solution  |
+| Event Log Solution  | Solution | 2024-01-24T12:12:27.972430Z | /relationSolutionToBusinessCapability/usageDisposition | random     | preferred      | restricted    | /fullPathName4                  | Solution  |
+| Event Log Solution  | Solution | 2024-01-24T12:12:43.012142Z | /relationSolutionToBusinessCapability/usageDisposition | random     | restricted     | decommission  | /fullPathName5                  | Solution  |
+| IntelEA             | Solution | 2024-01-17T12:12:27.972430Z | /relationSolutionToBusinessCapability                  | random     | emerging       | emerging     | /fullPathName6                  | Solution  |
+| Agility Health      | Solution | 2022-12-02T20:24:40.679824Z | /relationCapabilityToSolution/usageDisposition         | random     | restricted     | restricted     | /fullPathName9                  | Solution  |
+| ACID                | Solution | 2023-02-14T20:43:47.372430Z | /relationSolutionToCapability/usageDisposition         | random     |                |               | /fullPathName10                 | Solution  |
+| AAAP                | Solution | 2022-12-02T20:24:40.679824Z | /relationToBusinessCapability                          | random     |                | BusinessCapabi| /fullPathName9                  | Solution  |
+| AAAP                | Solution | 2023-02-14T20:43:47.372430Z | /relationToBusinessCapability/usageDisposition         | random     |                | restricted    | /fullPathName10                 | Solution  |
+
+Wanted record like bellow
+
+| name                | eventType| eventCreatedDate            | path                                                   | changedBy  | oldValue       | newValue      | fullPathName                    | assetType |
+|---------------------|----------|-----------------------------|---------------------------------------------------------------------|----------------|---------------|---------------------------------|-----------|
+| Active MQ Artemis   | Solution | 2022-12-02T20:00:47.012142Z | /relationSolutionToCapability/usageDisposition         | random     | restricted     | emerging      | /fullPathName5                 | Solution |
+| AI / Data Science   | Solution | 2023-02-14T20:44:12.372430Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | restricted    | /fullPathName8                  | Solution  |
+| Apache NiFi         | Solution | 2022-12-02T20:28:48.191218Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | restricted    | /fullPathName2                  | Solution  |
+| Event Log Solution  | Solution | 2024-01-24T12:12:43.012142Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | decommission  | /fullPathName5                  | Solution  |
+| IntelEA             | Solution | 2024-01-17T12:12:27.972430Z | /relationSolutionToBusinessCapability                  | random     | emerging       | emerging       | /fullPathName6                  | Solution  |
+| Agility Health      | Solution | 2022-12-02T20:24:40.679824Z | /relationCapabilityToSolution/usageDisposition         | random     | OldValue9      | NewValue9     | /fullPathName9                  | Solution  |
+| ACID                | Solution | 2023-02-14T20:43:47.372430Z | /relationSolutionToCapability/usageDisposition         | random     |                |               | /fullPathName10                 | Solution  |
+| AAAP                | Solution | 2022-12-02T20:24:40.679824Z | /relationToBusinessCapability                          | random     |                | BusinessCapabi| /fullPathName9                  | Solution  |
+| AAAP                | Solution | 2023-02-14T20:43:47.372430Z | /relationToBusinessCapability/usageDisposition         | random     |                | restricted    | /fullPathName10                 | Solution  |
