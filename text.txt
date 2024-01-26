@@ -1,35 +1,14 @@
-WITH LatestEvents AS (
-  SELECT
-    s.name AS solutionName,
-    e.path,
-    MAX(e.eventCreatedDate) AS latestEventCreatedDate
-  FROM
-    leanix_event_log e
-    INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
-    INNER JOIN leanix_capability_solution_relation r ON r.leanix_capability_id = s.leanix_capability_id
-    INNER JOIN capability_view c ON c.leanix_id = e.leanix_id
-  WHERE
-    e.active = true
-    AND (
-      e.path LIKE '%/relationToCapability%'
-      OR e.path LIKE '%/relationToBusinessCapability%'
-      OR e.path LIKE '%/relationCapabilityToSolution%'
-    )
-  GROUP BY
-    s.name, e.path
-)
-
 SELECT
   s.name AS solutionName,
   e.event_type AS eventType,
-  e.eventCreatedDate,
+  e.created_date AS eventCreatedDate,
   e.path,
-  e.changedBy,
+  e.user_name AS changedBy,
   e.old_value AS oldValue,
   e.new_value AS newValue,
   c.full_path AS fullPathName,
   CASE
-    WHEN s.leanix_solution_id = e.leanix_id THEN 'Solution'
+    WHEN s.name IN (SELECT DISTINCT name FROM "Event Log Solution") THEN 'Solution'
     ELSE NULL
   END AS assetType
 FROM
@@ -37,9 +16,23 @@ FROM
   INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
   INNER JOIN leanix_capability_solution_relation r ON r.leanix_capability_id = s.leanix_capability_id
   INNER JOIN capability_view c ON c.leanix_id = e.leanix_id
-  INNER JOIN LatestEvents le ON s.name = le.solutionName AND e.path = le.path AND e.eventCreatedDate = le.latestEventCreatedDate
 WHERE
-  e.active = true;
+  e.active = true
+  AND (
+    e.path LIKE '%/relationToCapability%'
+    OR e.path LIKE '%/relationToBusinessCapability%'
+    OR e.path LIKE '%/relationCapabilityToSolution%'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM leanix_event_log e2
+    WHERE e2.leanix_id = e.leanix_id
+      AND e2.path = e.path
+      AND TO_DATE(e2.created_date) = TO_DATE(e.created_date)
+      AND e2.created_date > e.created_date
+      AND e2.active = true
+  );
+
 
 
 
