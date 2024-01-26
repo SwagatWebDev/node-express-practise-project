@@ -1,48 +1,42 @@
 WITH ranked_events AS (
   SELECT
-    e.name,
-    e.eventType,
-    e.eventCreatedDate,
-    e.path,
-    e.changedBy,
-    e.oldValue,
-    e.newValue,
-    c.fullPathName,
-    CASE
-      WHEN s.leanix_solution_id = e.leanix_id THEN 'Solution'
-      ELSE NULL -- or provide a default value if needed
-    END AS assetType,
-    ROW_NUMBER() OVER (PARTITION BY e.name, e.path ORDER BY e.eventCreatedDate DESC) AS row_num
+    name,
+    eventType,
+    eventCreatedDate,
+    path,
+    changedBy,
+    oldValue,
+    newValue,
+    fullPathName,
+    assetType,
+    ROW_NUMBER() OVER (PARTITION BY name, path ORDER BY eventCreatedDate DESC) AS row_num
   FROM
-    leanix_event_log e
-    INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
-    INNER JOIN leanix_capability_solution_relation r ON r.leanix_capability_id = s.leanix_capability_id
-    INNER JOIN capability_view c ON c.leanix_id = e.leanix_id
+    "Event Log Table"
   WHERE
-    e.active = true
-    AND (
-      e.path IN (
-        '/relationCapabilityToSolution/usageDisposition',
-        '/relationSolutionToCapability/usageDisposition',
-        '/relationToBusinessCapability/usageDisposition'
-      )
-      OR e.path NOT LIKE '/relation%'
+    path IN (
+      '/relationSolutionToCapability/usageDisposition',
+      '/relationToBusinessCapability/usageDisposition',
+      '/relationCapabilityToSolution/usageDisposition'
     )
 )
 SELECT
   name,
   eventType,
-  eventCreatedDate,
+  MAX(eventCreatedDate) AS eventCreatedDate,
   path,
   changedBy,
-  oldValue,
-  newValue,
-  fullPathName,
+  FIRST_VALUE(oldValue) OVER (PARTITION BY name, path ORDER BY eventCreatedDate DESC) AS oldValue,
+  FIRST_VALUE(newValue) OVER (PARTITION BY name, path ORDER BY eventCreatedDate DESC) AS newValue,
+  FIRST_VALUE(fullPathName) OVER (PARTITION BY name, path ORDER BY eventCreatedDate DESC) AS fullPathName,
   assetType
 FROM
   ranked_events
 WHERE
-  row_num = 1;
+  row_num = 1
+GROUP BY
+  name, eventType, path, changedBy, assetType
+ORDER BY
+  eventCreatedDate DESC;
 
 
 Event Log Table:
@@ -81,5 +75,4 @@ Wanted record like bellow
 | IntelEA             | Solution | 2024-01-17T12:12:27.972430Z | /relationSolutionToBusinessCapability                  | random     | emerging       | emerging       | /fullPathName6                  | Solution  |
 | Agility Health      | Solution | 2022-12-02T20:24:40.679824Z | /relationCapabilityToSolution/usageDisposition         | random     | OldValue9      | NewValue9     | /fullPathName9                  | Solution  |
 | ACID                | Solution | 2023-02-14T20:43:47.372430Z | /relationSolutionToCapability/usageDisposition         | random     |                |               | /fullPathName10                 | Solution  |
-| AAAP                | Solution | 2022-12-02T20:24:40.679824Z | /relationToBusinessCapability                          | random     |                | BusinessCapabi| /fullPathName9                  | Solution  |
 | AAAP                | Solution | 2023-02-14T20:43:47.372430Z | /relationToBusinessCapability/usageDisposition         | random     |                | restricted    | /fullPathName10                 | Solution  |
