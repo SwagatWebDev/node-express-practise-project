@@ -1,8 +1,14 @@
-WITH latest_events AS (
+WITH ranked_events AS (
   SELECT
     s.name AS solutionName,
+    e.event_type AS eventType,
+    e.created_date AS eventCreatedDate,
     e.path AS path,
-    MAX(e.eventCreatedDate) AS latestEventDate
+    e.user_name AS changedBy,
+    e.old_value AS oldValue,
+    e.new_value AS newValue,
+    c.full_path AS fullPathName,
+    ROW_NUMBER() OVER (PARTITION BY s.name ORDER BY e.created_date DESC) AS rnk
   FROM
     leanix_event_log e
     INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
@@ -11,82 +17,34 @@ WITH latest_events AS (
   WHERE
     e.active = true
     AND (
-      e.path LIKE '%/relationToCapability%'
+      e.path LIKE '%/relationCapabilityToSolution%'
+      OR e.path LIKE '%/relationSolutionToCapability%'
       OR e.path LIKE '%/relationToBusinessCapability%'
-      OR e.path LIKE '%/relationCapabilityToSolution%'
     )
-  GROUP BY
-    s.name, e.path
 )
 
 SELECT
-  s.name AS solutionName,
-  e.event_type AS eventType,
-  e.created_date AS eventCreatedDate,
-  e.path AS path,
-  e.user_name AS changedBy,
-  e.old_value AS oldValue,
-  e.new_value AS newValue,
-  c.full_path AS fullPathName,
+  solutionName,
+  eventType,
+  eventCreatedDate,
+  path,
+  changedBy,
+  oldValue,
+  newValue,
+  fullPathName,
   CASE
-    WHEN s.leanix_solution_id = e.leanix_id THEN 'Solution'
+    WHEN solutionName IN (SELECT DISTINCT name FROM "Event Log Solution") THEN 'Solution'
     ELSE NULL -- or provide a default value if needed
   END AS assetType
 FROM
-  leanix_event_log e
-  INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
-  INNER JOIN leanix_capability_solution_relation r ON r.leanix_capability_id = s.leanix_capability_id
-  INNER JOIN capability_view c ON c.leanix_id = e.leanix_id
-  INNER JOIN latest_events le ON s.name = le.solutionName AND e.path = le.path AND e.eventCreatedDate = le.latestEventDate
+  ranked_events
 WHERE
-  e.active = true
-ORDER BY
-  eventCreatedDate DESC;
+  rnk = 1;
+
+---------------------
 
 
-
-
-Event Log Table:
-
-| name                | eventType| eventCreatedDate            | path                                                   | changedBy  | oldValue       | newValue      | fullPathName                    | assetType |
-|---------------------|----------|-----------------------------|---------------------------------------------------------------------|----------------|---------------|---------------------------------|-----------|
-| Active MQ Artemis   | Solution | 2022-12-02T20:27:31.343570Z | /relationSolutionToBusinessCapability/usageDisposition | random     | restricted     | emerging      | /fullPathName1                  | Solution  |
-| Active MQ Artemis   | Solution | 2022-12-02T20:27:32.663394Z | /relationSolutionToBusinessCapability/usageDisposition | random     | emerging       | emerging      | /fullPathName2                  | Solution  |
-| Active MQ Artemis   | Solution | 2022-12-02T16:08:52.822511Z | /relationSolutionToCapability/usageDisposition         | random     | restricted     | preferred     | /fullPathName3                  | Solution  |
-| Active MQ Artemis   | Solution | 2022-12-02T20:20:31.891081Z | /relationSolutionToCapability/usageDisposition         | random     | preferred      | preferred      | /fullPathName4                  | Solution  |
-| Active MQ Artemis   | Solution | 2022-12-02T20:00:47.012142Z | /relationSolutionToCapability/usageDisposition         | random     | preferred      | emerging      | /fullPathName5                  | Solution  |
-| AI / Data Science   | Solution | 2023-02-14T20:43:47.372430Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | restricted    | /fullPathName6                  | Solution  |
-| AI / Data Science   | Solution | 2023-02-14T20:43:58.450240Z | /relationSolutionToBusinessCapability/usageDisposition | random     | restricted     | restricted    | /fullPathName7                  | Solution  |
-| AI / Data Science   | Solution | 2023-02-14T20:44:12.372430Z | /relationSolutionToBusinessCapability/usageDisposition | random     | preferred      | restricted    | /fullPathName8                  | Solution  |
-| Apache NiFi         | Solution | 2021-07-09T19:55:48.191218Z | /relationCapabilityToSolution/usageDisposition         | random     | required       | restricted    | /fullPathName9                  | Solution  |
-| Apache NiFi         | Solution | 2021-07-09T19:55:52.563189Z | /relationCapabilityToSolution/usageDisposition         | random     | decommission   | restricted    | /fullPathName10                 | Solution  |
-| Apache NiFi         | Solution | 2022-12-02T20:28:46.704615Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | restricted    | /fullPathName1                  | Solution  |
-| Apache NiFi         | Solution | 2022-12-02T20:28:48.191218Z | /relationSolutionToBusinessCapability/usageDisposition | random     | preferred      | restricted    | /fullPathName2                  | Solution  |
-| Event Log Solution  | Solution | 2024-01-24T12:07:29.012142Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | preferred     | /fullPathName3                  | Solution  |
-| Event Log Solution  | Solution | 2024-01-24T12:12:27.972430Z | /relationSolutionToBusinessCapability/usageDisposition | random     | preferred      | restricted    | /fullPathName4                  | Solution  |
-| Event Log Solution  | Solution | 2024-01-24T12:12:43.012142Z | /relationSolutionToBusinessCapability/usageDisposition | random     | restricted     | decommission  | /fullPathName5                  | Solution  |
-| IntelEA             | Solution | 2024-01-17T12:12:27.972430Z | /relationSolutionToBusinessCapability                  | random     | emerging       | emerging     | /fullPathName6                  | Solution  |
-| Agility Health      | Solution | 2022-12-02T20:24:40.679824Z | /relationCapabilityToSolution/usageDisposition         | random     | restricted     | restricted     | /fullPathName9                  | Solution  |
-| ACID                | Solution | 2023-02-14T20:43:47.372430Z | /relationSolutionToCapability/usageDisposition         | random     |                |               | /fullPathName10                 | Solution  |
-| AAAP                | Solution | 2022-12-02T20:24:40.679824Z | /relationToBusinessCapability                          | random     |                | BusinessCapabi| /fullPathName9                  | Solution  |
-| AAAP                | Solution | 2023-02-14T20:43:47.372430Z | /relationToBusinessCapability/usageDisposition         | random     |                | restricted    | /fullPathName10                 | Solution  |
-
-Wanted record like bellow
-
-| name                | eventType| eventCreatedDate            | path                                                   | changedBy  | oldValue       | newValue      | fullPathName                    | assetType |
-|---------------------|----------|-----------------------------|---------------------------------------------------------------------|----------------|---------------|---------------------------------|-----------|
-| Active MQ Artemis   | Solution | 2022-12-02T20:00:47.012142Z | /relationSolutionToCapability/usageDisposition         | random     | restricted     | emerging      | /fullPathName5                 | Solution |
-| AI / Data Science   | Solution | 2023-02-14T20:44:12.372430Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | restricted    | /fullPathName8                  | Solution  |
-| Apache NiFi         | Solution | 2022-12-02T20:28:48.191218Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | restricted    | /fullPathName2                  | Solution  |
-| Event Log Solution  | Solution | 2024-01-24T12:12:43.012142Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | decommission  | /fullPathName5                  | Solution  |
-| IntelEA             | Solution | 2024-01-17T12:12:27.972430Z | /relationSolutionToBusinessCapability                  | random     | emerging       | emerging       | /fullPathName6                  | Solution  |
-| Agility Health      | Solution | 2022-12-02T20:24:40.679824Z | /relationCapabilityToSolution/usageDisposition         | random     | OldValue9      | NewValue9     | /fullPathName9                  | Solution  |
-| ACID                | Solution | 2023-02-14T20:43:47.372430Z | /relationSolutionToCapability/usageDisposition         | random     |                |               | /fullPathName10                 | Solution  |
-| AAAP                | Solution | 2023-02-14T20:43:47.372430Z | /relationToBusinessCapability/usageDisposition         | random     |                | restricted    | /fullPathName10                 | Solution  |
-
- Depends on my above requirement modify my query and give a working query to solve the Query
-
- SELECT DISTINCT
+SELECT DISTINCT
    s.name AS solutionName,
    e.event_type AS eventType,
    e.created_date AS eventCreatedDate,
@@ -111,3 +69,50 @@ Wanted record like bellow
      OR e.path LIKE '%/relationToBusinessCapability%'
      OR e.path LIKE '%/relationCapabilityToSolution%'
    )
+
+Above query returns bellow table
+
+| name                | eventType| eventCreatedDate            | path                                                   | changedBy  | oldValue       | newValue      | fullPathName                    | assetType |
+|---------------------|----------|-----------------------------|---------------------------------------------------------------------|----------------|---------------|---------------------------------|-----------|
+| Active MQ Artemis   | Solution | 2022-12-02T20:27:31.343570Z | /relationSolutionToBusinessCapability/usageDisposition | random     | restricted     | emerging      | /fullPathName1                  | Solution  |
+| Active MQ Artemis   | Solution | 2022-12-02T20:27:32.663394Z | /relationSolutionToBusinessCapability/usageDisposition | random     | emerging       | emerging      | /fullPathName2                  | Solution  |
+| Active MQ Artemis   | Solution | 2022-12-02T16:08:52.822511Z | /relationSolutionToCapability/usageDisposition         | random     | restricted     | preferred     | /fullPathName3                  | Solution  |
+| Active MQ Artemis   | Solution | 2022-12-02T20:20:31.891081Z | /relationSolutionToCapability/usageDisposition         | random     | preferred      | preferred      | /fullPathName4                  | Solution  |
+| Active MQ Artemis   | Solution | 2022-12-02T20:00:47.012142Z | /relationSolutionToCapability/usageDisposition         | random     | preferred      | emerging      | /fullPathName5                  | Solution  |
+| AI / Data Science   | Solution | 2023-02-14T20:43:47.372430Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | restricted    | /fullPathName6                  | Solution  |
+| AI / Data Science   | Solution | 2023-02-14T20:43:58.450240Z | /relationSolutionToBusinessCapability/usageDisposition | random     | restricted     | restricted    | /fullPathName7                  | Solution  |
+| AI / Data Science   | Solution | 2023-02-14T20:44:12.372430Z | /relationSolutionToBusinessCapability/usageDisposition | random     | preferred      | restricted    | /fullPathName8                  | Solution  |
+| Apache NiFi         | Solution | 2021-07-09T19:55:48.191218Z | /relationCapabilityToSolution/usageDisposition         | random     | required       | restricted    | /fullPathName9                  | Solution  |
+| Apache NiFi         | Solution | 2021-07-09T19:55:52.563189Z | /relationCapabilityToSolution/usageDisposition         | random     | decommission   | restricted    | /fullPathName10                 | Solution  |
+| Apache NiFi         | Solution | 2022-12-02T20:28:46.704615Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | restricted    | /fullPathName1                  | Solution  |
+| Apache NiFi         | Solution | 2022-12-02T20:28:48.191218Z | /relationSolutionToBusinessCapability/usageDisposition | random     | preferred      | restricted    | /fullPathName2                  | Solution  |
+| Event Log Solution  | Solution | 2024-01-24T12:07:29.012142Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | preferred     | /fullPathName3                  | Solution  |
+| Event Log Solution  | Solution | 2024-01-24T12:12:27.972430Z | /relationSolutionToBusinessCapability/usageDisposition | random     | preferred      | restricted    | /fullPathName4                  | Solution  |
+| Event Log Solution  | Solution | 2024-01-24T12:12:43.012142Z | /relationSolutionToBusinessCapability/usageDisposition | random     | restricted     | decommission  | /fullPathName5                  | Solution  |
+| IntelEA             | Solution | 2024-01-17T12:12:27.972430Z | /relationSolutionToBusinessCapability                  | random     | emerging       | emerging     | /fullPathName6                  | Solution  |
+| Agility Health      | Solution | 2022-12-02T20:24:40.679824Z | /relationCapabilityToSolution/usageDisposition         | random     | restricted     | restricted     | /fullPathName9                  | Solution  |
+| ACID                | Solution | 2023-02-14T20:43:47.372430Z | /relationSolutionToCapability/usageDisposition         | random     |                |               | /fullPathName10                 | Solution  |
+| AAAP                | Solution | 2022-12-02T20:24:40.679824Z | /relationToBusinessCapability                          | random     |                | BusinessCapabi| /fullPathName9                  | Solution  |
+| AAAP                | Solution | 2023-02-14T20:43:47.372430Z | /relationToBusinessCapability/usageDisposition         | random     |                | restricted    | /fullPathName10                 | Solution  |
+
+from the above table Wanted record like bellow
+
+| name                | eventType| eventCreatedDate            | path                                                   | changedBy  | oldValue       | newValue      | fullPathName                    | assetType |
+|---------------------|----------|-----------------------------|---------------------------------------------------------------------|----------------|---------------|---------------------------------|-----------|
+| Active MQ Artemis   | Solution | 2022-12-02T20:00:47.012142Z | /relationSolutionToCapability/usageDisposition         | random     | restricted     | emerging      | /fullPathName5                 | Solution |
+| AI / Data Science   | Solution | 2023-02-14T20:44:12.372430Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | restricted    | /fullPathName8                  | Solution  |
+| Apache NiFi         | Solution | 2022-12-02T20:28:48.191218Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | restricted    | /fullPathName2                  | Solution  |
+| Event Log Solution  | Solution | 2024-01-24T12:12:43.012142Z | /relationSolutionToBusinessCapability/usageDisposition | random     | required       | decommission  | /fullPathName5                  | Solution  |
+| IntelEA             | Solution | 2024-01-17T12:12:27.972430Z | /relationSolutionToBusinessCapability                  | random     | emerging       | emerging       | /fullPathName6                  | Solution  |
+| Agility Health      | Solution | 2022-12-02T20:24:40.679824Z | /relationCapabilityToSolution/usageDisposition         | random     | OldValue9      | NewValue9     | /fullPathName9                  | Solution  |
+| ACID                | Solution | 2023-02-14T20:43:47.372430Z | /relationSolutionToCapability/usageDisposition         | random     |                |               | /fullPathName10                 | Solution  |
+| AAAP                | Solution | 2023-02-14T20:43:47.372430Z | /relationToBusinessCapability/usageDisposition         | random     |                | restricted    | /fullPathName10                 | Solution  |
+
+ Depends on my above requirement modify my query and give a working query to solve the Query
+ Bellow Query i want to get unique record by considering name is unique. Consider record path column first like /relationCapabilityToSolution/usageDisposition
+ or /relationSolutionToCapability/usageDisposition or /relationToBusinessCapability/usageDisposition then make s.name as unique between the.
+ Same row show all column data record as latest based on eventCreatedDate. Old Value column data should be the same day created s.name data
+ with Day based starting time old value
+ newValue is the latestDate date and latest dateTime based new Value
+
+
