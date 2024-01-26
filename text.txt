@@ -1,18 +1,8 @@
-WITH ranked_events AS (
+WITH latest_events AS (
   SELECT
     s.name AS solutionName,
-    e.event_type AS eventType,
-    e.created_date AS eventCreatedDate,
     e.path AS path,
-    e.user_name AS changedBy,
-    e.old_value AS oldValue,
-    e.new_value AS newValue,
-    c.full_path AS fullPathName,
-    CASE
-      WHEN s.leanix_solution_id = e.leanix_id THEN 'Solution'
-      ELSE NULL -- or provide a default value if needed
-    END AS assetType,
-    ROW_NUMBER() OVER (PARTITION BY s.name, e.path ORDER BY e.eventCreatedDate DESC) AS row_num
+    MAX(e.eventCreatedDate) AS latestEventDate
   FROM
     leanix_event_log e
     INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
@@ -25,25 +15,34 @@ WITH ranked_events AS (
       OR e.path LIKE '%/relationToBusinessCapability%'
       OR e.path LIKE '%/relationCapabilityToSolution%'
     )
+  GROUP BY
+    s.name, e.path
 )
+
 SELECT
-  solutionName,
-  eventType,
-  MAX(eventCreatedDate) AS eventCreatedDate,
-  path,
-  changedBy,
-  FIRST_VALUE(oldValue) OVER (PARTITION BY solutionName, path ORDER BY eventCreatedDate DESC) AS oldValue,
-  FIRST_VALUE(newValue) OVER (PARTITION BY solutionName, path ORDER BY eventCreatedDate DESC) AS newValue,
-  FIRST_VALUE(fullPathName) OVER (PARTITION BY solutionName, path ORDER BY eventCreatedDate DESC) AS fullPathName,
-  assetType
+  s.name AS solutionName,
+  e.event_type AS eventType,
+  e.created_date AS eventCreatedDate,
+  e.path AS path,
+  e.user_name AS changedBy,
+  e.old_value AS oldValue,
+  e.new_value AS newValue,
+  c.full_path AS fullPathName,
+  CASE
+    WHEN s.leanix_solution_id = e.leanix_id THEN 'Solution'
+    ELSE NULL -- or provide a default value if needed
+  END AS assetType
 FROM
-  ranked_events
+  leanix_event_log e
+  INNER JOIN leanix_solution s ON s.leanix_solution_id = e.leanix_id
+  INNER JOIN leanix_capability_solution_relation r ON r.leanix_capability_id = s.leanix_capability_id
+  INNER JOIN capability_view c ON c.leanix_id = e.leanix_id
+  INNER JOIN latest_events le ON s.name = le.solutionName AND e.path = le.path AND e.eventCreatedDate = le.latestEventDate
 WHERE
-  row_num = 1
-GROUP BY
-  solutionName, eventType, path, changedBy, assetType
+  e.active = true
 ORDER BY
   eventCreatedDate DESC;
+
 
 
 
