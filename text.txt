@@ -17,21 +17,21 @@ WITH ranked_events AS (
   WHERE
     e.active = true
     AND (
-      e.path LIKE '%/relationCapabilityToSolution%'
-      OR e.path LIKE '%/relationSolutionToCapability%'
-      OR e.path LIKE '%/relationToBusinessCapability%'
+      e.path LIKE '%/relationCapabilityToSolution/usageDisposition'
+      OR e.path LIKE '%/relationSolutionToCapability/usageDisposition'
+      OR e.path LIKE '%/relationToBusinessCapability/usageDisposition'
     )
 )
 
 SELECT
   solutionName,
   eventType,
-  eventCreatedDate,
-  path,
-  changedBy,
-  oldValue,
-  newValue,
-  fullPathName,
+  MAX(eventCreatedDate) AS eventCreatedDate,
+  MAX(path) AS path,
+  MAX(changedBy) AS changedBy,
+  MAX(oldValue) AS oldValue,
+  MAX(newValue) AS newValue,
+  MAX(fullPathName) AS fullPathName,
   CASE
     WHEN solutionName IN (SELECT DISTINCT name FROM "Event Log Solution") THEN 'Solution'
     ELSE NULL -- or provide a default value if needed
@@ -39,7 +39,10 @@ SELECT
 FROM
   ranked_events
 WHERE
-  rnk = 1;
+  rnk = 1
+GROUP BY
+  solutionName, eventType;
+
 
 ---------------------
 
