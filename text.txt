@@ -17,9 +17,9 @@ WITH ranked_events AS (
   WHERE
     e.active = true
     AND (
-      e.path LIKE '%/relationCapabilityToSolution/usageDisposition'
-      OR e.path LIKE '%/relationSolutionToCapability/usageDisposition'
-      OR e.path LIKE '%/relationToBusinessCapability/usageDisposition'
+      LOWER(e.path) LIKE '%/relationcapabilitytosolution%'
+      OR LOWER(e.path) LIKE '%/relationsolutiontocapability%'
+      OR LOWER(e.path) LIKE '%/relationtobusinesscapability%'
     )
 )
 
@@ -42,6 +42,7 @@ WHERE
   rnk = 1
 GROUP BY
   solutionName, eventType;
+
 
 
 ---------------------
