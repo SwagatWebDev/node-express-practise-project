@@ -1,0 +1,7 @@
+private boolean isSpecialPath(String path) {
+    return path != null && Arrays.asList(
+            "'relSolutionToCapability/usageDisposition'",
+            "'relSolutionToBusinessCapability/usageDisposition'",
+            "'relCapabilityToSolution/usageDisposition'"
+    ).contains(path);
+}
