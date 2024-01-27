@@ -1,0 +1,25 @@
+private String getUniqueNameForPath(String name, String eventDateString) {
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("your_date_time_format_here");
+
+    // Parse the event date string into LocalDateTime
+    LocalDateTime eventDate = LocalDateTime.parse(eventDateString, formatter);
+
+    // Check if the name has already been encountered for the path
+    if (latestDateByPath.containsKey(name)) {
+        // Compare the dates and update if the current event date is later
+        if (eventDate.isAfter(latestDateByPath.get(name))) {
+            latestDateByPath.put(name, eventDate);
+            namesToRemove.add(name);
+            return name;
+        } else {
+            // Remove the name if the current event date is not later
+            namesToRemove.add(name);
+        }
+    } else {
+        // Add the name and date to the map for the path
+        latestDateByPath.put(name, eventDate);
+        namesToRemove.remove(name);
+    }
+
+    return name;
+}
