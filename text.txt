@@ -13,12 +13,16 @@ private EventLogProjection pickRecordWithMinOldValueAndMaxNewValue(List<EventLog
                                     EventLogProjection::getEventCreatedDate,
                                     Comparator.nullsLast(Comparator.naturalOrder())))
                             .orElseThrow())
-            .map(maxNewValueEvent ->
-                    eventsWithSameNamePathAndDay.stream()
-                            .filter(event -> Objects.equals(event.getNewValue(), maxNewValueEvent.getNewValue()))
-                            .max(Comparator.comparing(
-                                    EventLogProjection::getEventCreatedDate,
-                                    Comparator.nullsLast(Comparator.naturalOrder())))
-                            .orElseThrow())
+            .map(minOldAndMaxNewValueEvent -> {
+                String oldValue = minOldAndMaxNewValueEvent.getOldValue();
+                String newValue = eventsWithSameNamePathAndDay.stream()
+                        .filter(event -> Objects.equals(event.getOldValue(), oldValue))
+                        .max(Comparator.comparing(
+                                EventLogProjection::getEventCreatedDate,
+                                Comparator.nullsLast(Comparator.naturalOrder())))
+                        .map(EventLogProjection::getNewValue)
+                        .orElseThrow();
+                return new EventLogProjectionImpl(oldValue, newValue); // Adjust this line accordingly
+            })
             .orElseThrow(); // Handle as per your logic
 }
