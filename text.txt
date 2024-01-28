@@ -1,0 +1,40 @@
+public Page<EventLogDto> getEventLog(Pageable pageable) {
+    Page<EventlogProjection> eventLogData = eventLogRepository.getEventLogData(pageable);
+    List<EventLogDto> combinedEventLogDtoList = getCombinedEventLogDtoList(eventLogData.getContent());
+
+    return new PageImpl<>(combinedEventLogDtoList, pageable, eventLogData.getTotalElements());
+}
+
+private List<EventLogDto> getCombinedEventLogDtoList(List<EventLogProjection> eventLogData) {
+    Map<String, List<EventLogProjection>> groupedByNameAndPathAndDay =
+        eventLogData.stream()
+            .filter(this::isMatchingPath)
+            .collect(Collectors.groupingBy(
+                event -> event.getName() + event.getEventCreatedDate().substring(0, 10)
+            ));
+
+    return groupedByNameAndPathAndDay.values().stream()
+        .map(this::processGroupedEvents)
+        .map(this::mapToEventLogDto)
+        .collect(Collectors.toList());
+}
+
+private boolean isMatchingPath(EventLogProjection event) {
+    String path = event.getPath();
+    return "/relSolutionToCapability/usageDisposition".equals(path) ||
+            "/relSolutionToBusinessCapability/usageDisposition".equals(path) ||
+            "/relCapabilityToSolution/usageDisposition".equals(path);
+}
+
+private EventLogProjection processGroupedEvents(List<EventLogProjection> eventsWithSameNameAndDay) {
+    List<EventLogProjection> sortedByEventCreatedTime = eventsWithSameNameAndDay.stream()
+            .sorted(Comparator.comparing(EventLogProjection::getEventCreatedDate))
+            .collect(Collectors.toList());
+
+    EventLogProjection uniqueRecord = sortedByEventCreatedTime.get(0); // Select the record with the lowest eventCreatedTime
+
+    // Update the oldValue to be the one with the lowest eventCreatedTime
+    uniqueRecord.setOldValue(sortedByEventCreatedTime.get(0).getOldValue());
+
+    return uniqueRecord;
+}
