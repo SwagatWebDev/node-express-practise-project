@@ -1,0 +1,11 @@
+EventLogMappingOto result = EventLogMappingOto.builder()
+        .oldValue(oldValue)
+        .eventType(eventLogProjectionData.getEventType())
+        .name(eventLogProjectionData.getName())
+        .eventCreatedDate(eventLogProjectionData.getEventCreatedDate())
+        .assetType(eventLogProjectionData.getAssetType())
+        .changedBy(eventLogProjectionData.getChangedBy())
+        .fullPathName(eventLogProjectionData.getFullPathName())
+        .newValue(eventLogProjectionData.getNewValue())
+        .path(eventLogProjectionData.getPath())
+        .build();
