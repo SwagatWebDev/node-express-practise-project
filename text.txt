@@ -1,0 +1,34 @@
+@Override
+public Page<EventLogDto> getEventLog(Pageable pageable) {
+    Page<EventLogProjection> eventLogData = eventLogRepository.getEventLogData(pageable);
+
+    // Create a map with a key as a combination of name and date, and value as EventLogProjection
+    Map<String, EventLogProjection> uniqueEventsMap = eventLogData.stream()
+            .collect(Collectors.toMap(
+                    event -> event.getName() + parseEventCreatedDate(event.getEventCreatedDate()),
+                    Function.identity(),
+                    (event1, event2) -> {
+                        // Compare dates and pick the one with the lower event created date
+                        LocalDate date1 = parseEventCreatedDate(event1.getEventCreatedDate());
+                        LocalDate date2 = parseEventCreatedDate(event2.getEventCreatedDate());
+
+                        return date1.isBefore(date2) ? event1 : event2;
+                    }
+            ));
+
+    List<EventLogDto> eventLogDtoList = uniqueEventsMap.values().stream()
+            .map(this::mapToEventLogDto)
+            .collect(Collectors.toList());
+
+    return new PageImpl<>(eventLogDtoList, pageable, eventLogData.getTotalElements());
+}
+
+private LocalDate parseEventCreatedDate(String eventCreatedDate) {
+    try {
+        return LocalDate.parse(eventCreatedDate);
+    } catch (DateTimeParseException e) {
+        // Log the error and return a default date, adjust the default date as needed
+        System.err.println("Error parsing date: " + eventCreatedDate + ", using default date.");
+        return LocalDate.now(); // Provide a suitable default date
+    }
+}
