@@ -1,29 +1,3 @@
-public class EventLogProjectionResult implements EventLogProjection {
-
-    private String oldValue;
-    private String newValue;
-    // Other fields if any
-
-    public EventLogProjectionResult(String oldValue, String newValue) {
-        this.oldValue = oldValue;
-        this.newValue = newValue;
-        // Initialize other fields if any
-    }
-
-    @Override
-    public String getOldValue() {
-        return oldValue;
-    }
-
-    @Override
-    public String getNewValue() {
-        return newValue;
-    }
-
-    // Implement other methods if necessary
-}
-
-// Modify the method
 private EventLogProjectionResult pickRecordWithMinAndMaxValues(
         List<EventLogProjection> events,
         Function<EventLogProjection, String> oldValueExtractor,
@@ -48,14 +22,15 @@ private EventLogProjectionResult pickRecordWithMinAndMaxValues(
                             Comparator.nullsLast(Comparator.naturalOrder())))
             .orElseThrow(); // Handle as per your logic
 
-    return new EventLogProjectionResult(minOldValueEvent.getOldValue(), maxNewValueEvent.getNewValue());
-}
+    // Null check before calling contains
+    String minOldValue = minOldValueEvent.getOldValue();
+    String maxNewValue = maxNewValueEvent.getNewValue();
 
-// Usage
-return groupedByNameAndPathAndDay.values().stream()
-        .map(events -> pickRecordWithMinAndMaxValues(
-                events,
-                EventLogProjection::getOldValue,
-                EventLogProjection::getNewValue))
-        .map(this::mapToEventLogDto)
-        .collect(Collectors.toList());
+    if (minOldValue != null && maxNewValue != null && maxNewValue.contains(minOldValue)) {
+        // Modify other fields if necessary
+        return new EventLogProjectionResult(minOldValue, maxNewValue);
+    } else {
+        // Handle the case when either minOldValue or maxNewValue is null or maxNewValue doesn't contain minOldValue
+        return new EventLogProjectionResult(minOldValue, maxNewValue);
+    }
+}
