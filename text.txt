@@ -1,23 +1,28 @@
-private void updateRecordWithMinOldValueAndMaxNewValue(List<EventLogProjection> eventsWithSameNamePathAndDay) {
-    eventsWithSameNamePathAndDay.stream()
-            .min(Comparator.comparing(
-                    EventLogProjection::getOldValue,
-                    Comparator.nullsLast(Comparator.naturalOrder()))
-                    .thenComparing(
-                            EventLogProjection::getEventCreatedDate,
-                            Comparator.nullsLast(Comparator.naturalOrder())))
-            .ifPresent(minOldValueEvent -> {
-                EventLogProjection maxNewValueEvent = eventsWithSameNamePathAndDay.stream()
-                        .filter(event -> Objects.equals(event.getOldValue(), minOldValueEvent.getOldValue()))
-                        .max(Comparator.comparing(
-                                EventLogProjection::getEventCreatedDate,
-                                Comparator.nullsLast(Comparator.naturalOrder())))
-                        .orElseThrow();
+private EventLogProjection pickRecordWithMinOldValueAndMaxNewValue(List<EventLogProjection> eventsWithSameNamePathAndDay) {
+    return eventsWithSameNamePathAndDay.stream()
+            .min(Comparator.comparing(EventLogProjection::getOldValue, Comparator.nullsLast(String::compareTo)))
+            .map(minOldValueEvent ->
+                    eventsWithSameNamePathAndDay.stream()
+                            .filter(event -> Objects.equals(event.getNewValue(), minOldValueEvent.getNewValue()))
+                            .max(Comparator.comparing(EventLogProjection::getEventCreatedDate, Comparator.nullsLast(String::compareTo)))
+                            .map(maxNewValueEvent -> {
+                                EventLogProjection result = new EventLogProjection() {
+                                    @Override
+                                    public String getOldValue() {
+                                        return minOldValueEvent.getOldValue();
+                                    }
 
-                // Update the existing record with the new values
-                minOldValueEvent.setNewValue(maxNewValueEvent.getNewValue());
-                // Update other fields as needed
-                minOldValueEvent.setEventCreatedDate(maxNewValueEvent.getEventCreatedDate());
-                // Update other fields as needed
-            });
+                                    @Override
+                                    public String getNewValue() {
+                                        return maxNewValueEvent.getNewValue();
+                                    }
+
+                                    // Implement other methods of EventLogProjection
+                                };
+
+                                return result;
+                            })
+                            .orElse(minOldValueEvent)
+            )
+            .orElseThrow(); // Handle as per your logic
 }
