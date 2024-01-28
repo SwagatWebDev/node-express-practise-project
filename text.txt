@@ -1,27 +1,7 @@
-private EventLogProjection pickRecordWithMinAndMaxValues(List<EventLogProjection> eventsWithSameNamePathAndDay, Function<EventLogProjection, String> valueExtractor) {
-    return eventsWithSameNamePathAndDay.stream()
-            .min(Comparator.comparing(
-                    valueExtractor,
-                    Comparator.nullsLast(Comparator.naturalOrder()))
-                    .thenComparing(
-                            EventLogProjection::getEventCreatedDate,
-                            Comparator.nullsLast(Comparator.naturalOrder())))
-            .map(minValueEvent ->
-                    eventsWithSameNamePathAndDay.stream()
-                            .filter(event -> Objects.equals(valueExtractor.apply(event), valueExtractor.apply(minValueEvent)))
-                            .max(Comparator.comparing(
-                                    EventLogProjection::getEventCreatedDate,
-                                    Comparator.nullsLast(Comparator.naturalOrder())))
-                            .orElseThrow()
-            )
-            .orElseThrow(); // Handle as per your logic
-}
-
-// Usage
-private EventLogProjection pickRecordWithMinOldValueAndMaxNewValue(List<EventLogProjection> eventsWithSameNamePathAndDay) {
-    return pickRecordWithMinAndMaxValues(eventsWithSameNamePathAndDay, EventLogProjection::getOldValue);
-}
-
-private EventLogProjection pickRecordWithMinNewValueAndMaxNewValue(List<EventLogProjection> eventsWithSameNamePathAndDay) {
-    return pickRecordWithMinAndMaxValues(eventsWithSameNamePathAndDay, EventLogProjection::getNewValue);
-}
+return groupedByNameAndPathAndDay.values().stream()
+        .flatMap(events -> Stream.of(
+                pickRecordWithMinAndMaxValues(events, EventLogProjection::getOldValue),
+                pickRecordWithMinAndMaxValues(events, EventLogProjection::getNewValue)
+        ))
+        .map(this::mapToEventLogDto)
+        .collect(Collectors.toList());
