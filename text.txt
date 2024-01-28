@@ -15,11 +15,20 @@ private EventLogProjection pickRecordWithMinOldValueAndMaxNewValue(List<EventLog
                             .orElseThrow()
             )
             .map(minOldAndMaxNewValueEvent -> {
-                EventLogProjection result = new EventLogProjectionImpl();
-                result.setOldValue(minOldAndMaxNewValueEvent.getOldValue());
-                result.setNewValue(minOldAndMaxNewValueEvent.getNewValue());
+                // Set the fields based on the highest event created time
+                minOldAndMaxNewValueEvent.setOldValue(minOldAndMaxNewValueEvent.getOldValue());
+                minOldAndMaxNewValueEvent.setNewValue(
+                        eventsWithSameNamePathAndDay.stream()
+                                .filter(event -> Objects.equals(event.getOldValue(), minOldAndMaxNewValueEvent.getOldValue()))
+                                .max(Comparator.comparing(
+                                        EventLogProjection::getEventCreatedDate,
+                                        Comparator.nullsLast(Comparator.naturalOrder())))
+                                .map(EventLogProjection::getNewValue)
+                                .orElse(minOldAndMaxNewValueEvent.getNewValue())
+                );
                 // Set other fields as needed
-                return result;
+
+                return minOldAndMaxNewValueEvent;
             })
             .orElseThrow(); // Handle as per your logic
 }
