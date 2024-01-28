@@ -2,48 +2,17 @@
 public Page<EventLogDto> getEventLog(Pageable pageable) {
     Page<EventLogProjection> eventLogData = eventLogRepository.getEventLogData(pageable);
 
-    Map<String, List<EventLogProjection>> groupedByNameAndDay = eventLogData.stream()
-            .collect(Collectors.groupingBy(
+    // Create a map with a key as a combination of name and date, and value as EventLogProjection
+    Map<String, EventLogProjection> uniqueEventsMap = eventLogData.stream()
+            .collect(Collectors.toMap(
                     event -> event.getName() + LocalDate.parse(event.getEventCreatedDate()).toString(),
-                    Collectors.toList()
+                    Function.identity(),
+                    (event1, event2) -> event1 // If duplicates, keep the first occurrence
             ));
 
-    List<EventLogDto> eventLogDtoList = groupedByNameAndDay.values().stream()
-            .flatMap(this::processDuplicateRecords)
-            .sorted(Comparator.comparing(EventLogDto::getEventCreatedDate).reversed())
+    List<EventLogDto> eventLogDtoList = uniqueEventsMap.values().stream()
+            .map(this::mapToEventLogDto)
             .collect(Collectors.toList());
 
     return new PageImpl<>(eventLogDtoList, pageable, eventLogData.getTotalElements());
-}
-
-private Stream<EventLogDto> processDuplicateRecords(List<EventLogProjection> eventsWithSameNameAndDay) {
-    return eventsWithSameNameAndDay.stream()
-            .collect(Collectors.groupingBy(
-                    EventLogProjection::getPath, Collectors.toList()
-            ))
-            .values()
-            .stream()
-            .map(this::pickRecordWithMinOldAndMaxNewValues)
-            .map(event -> mapToEventLogDto(event));
-}
-
-private EventLogDto pickRecordWithMinOldAndMaxNewValues(List<EventLogProjection> eventsWithSamePath) {
-    EventLogProjection minOldValueEvent = eventsWithSamePath.stream()
-            .min(Comparator.comparing(event -> LocalDate.parse(event.getEventCreatedDate())))
-            .orElseThrow(); // Handle as per your logic
-
-    EventLogProjection maxNewValueEvent = eventsWithSamePath.stream()
-            .max(Comparator.comparing(event -> LocalDate.parse(event.getEventCreatedDate())))
-            .orElseThrow(); // Handle as per your logic
-
-    return new EventLogDto(
-            minOldValueEvent.getName(),
-            minOldValueEvent.getEventCreatedDate(),
-            minOldValueEvent.getChangedBy(),
-            minOldValueEvent.getAssetType(),
-            getEventType(minOldValueEvent.getEventType()),
-            getProcessedNewValue(minOldValueEvent.getNewValue(), minOldValueEvent.getEventType()),
-            minOldValueEvent.getFullPathName(),
-            minOldValueEvent.getOldValue()
-    );
 }
