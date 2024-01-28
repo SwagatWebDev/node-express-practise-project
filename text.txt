@@ -1,0 +1,26 @@
+private EventLogProjection pickRecordWithMinOldValueAndMaxNewValue(List<EventLogProjection> eventsWithSameNamePathAndDay) {
+    return eventsWithSameNamePathAndDay.stream()
+            .min(Comparator.comparing(
+                    EventLogProjection::getOldValue,
+                    Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparing(
+                            EventLogProjection::getEventCreatedDate,
+                            Comparator.nullsLast(Comparator.naturalOrder())))
+            .map(minOldValueEvent ->
+                    eventsWithSameNamePathAndDay.stream()
+                            .filter(event -> Objects.equals(event.getOldValue(), minOldValueEvent.getOldValue()))
+                            .max(Comparator.comparing(
+                                    EventLogProjection::getEventCreatedDate,
+                                    Comparator.nullsLast(Comparator.naturalOrder())))
+                            .orElseThrow()
+            )
+            .map(minOldAndMaxNewValueEvent ->
+                    eventsWithSameNamePathAndDay.stream()
+                            .filter(event -> Objects.equals(event.getOldValue(), minOldAndMaxNewValueEvent.getOldValue()))
+                            .max(Comparator.comparing(
+                                    EventLogProjection::getEventCreatedDate,
+                                    Comparator.nullsLast(Comparator.naturalOrder())))
+                            .orElseThrow()
+            )
+            .orElseThrow(); // Handle as per your logic
+}
