@@ -1,5 +1,0 @@
-List<EventLogDto> eventLogDtoList = groupedByNameAndPathAndDay.entrySet().stream()
-        .flatMap(nameEntry -> nameEntry.getValue().entrySet().stream())
-        .flatMap(dayEntry -> pickRecordsWithMinOldValueAndMaxNewValue(dayEntry.getValue()).stream())
-        .map(this::mapToEventLogDto)
-        .collect(Collectors.toList());
