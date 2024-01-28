@@ -1,0 +1,41 @@
+List<EventLogDto> eventLogDtoList = groupedByNameAndPathAndDay.values().stream()
+        .flatMap(dayGroup -> dayGroup.values().stream())
+        .flatMap(events -> pickRecordsWithMinOldValueAndMaxNewValue(events).stream())
+        .map(this::mapToEventLogDto)
+        .collect(Collectors.toList());
+
+private List<EventLogProjection> pickRecordsWithMinOldValueAndMaxNewValue(List<EventLogProjection> eventLogData) {
+    Map<String, Map<String, List<EventLogProjection>>> groupedByNameAndDay = eventLogData.stream()
+            .collect(Collectors.groupingBy(
+                    EventLogProjection::getName,
+                    Collectors.groupingBy(EventLogProjection::getEventCreatedDate)));
+
+    return groupedByNameAndDay.values().stream()
+            .flatMap(dayGroup -> dayGroup.values().stream()
+                    .map(events -> pickRecordWithMinOldValueAndMaxNewValue(events)))
+            .collect(Collectors.toList());
+}
+
+private EventLogProjection pickRecordWithMinOldValueAndMaxNewValue(List<EventLogProjection> eventsWithSameNameAndDay) {
+    EventLogProjection minOldValueEvent = eventsWithSameNameAndDay.stream()
+            .min(Comparator.comparing(
+                    EventLogProjection::getOldValue,
+                    Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparing(
+                            EventLogProjection::getEventCreatedDate,
+                            Comparator.nullsLast(Comparator.naturalOrder())))
+            .orElseThrow();
+
+    EventLogProjection maxNewValueEvent = eventsWithSameNameAndDay.stream()
+            .filter(event -> Objects.equals(event.getOldValue(), minOldValueEvent.getOldValue()))
+            .max(Comparator.comparing(
+                    EventLogProjection::getNewValue,
+                    Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparing(
+                            EventLogProjection::getEventCreatedDate,
+                            Comparator.nullsLast(Comparator.naturalOrder())))
+            .orElse(minOldValueEvent);
+
+    return maxNewValueEvent;
+}
+
