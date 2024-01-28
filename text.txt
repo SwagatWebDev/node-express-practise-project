@@ -1,3 +1,17 @@
+private List<EventLogDto> getCombinedEventLogDtoList(List<EventLogProjection> eventLogData) {
+    Map<String, Optional<EventLogProjection>> uniqueRecords = eventLogData.stream()
+            .filter(this::isMatchingPath)
+            .collect(Collectors.groupingBy(
+                    event -> event.getName() + event.getEventCreatedDate().substring(0, 10),
+                    Collectors.minBy(Comparator.comparing(EventLogProjection::getEventCreatedDate))
+            ));
+
+    return uniqueRecords.values().stream()
+            .map(optionalEvent -> optionalEvent.map(e -> pickRecordWithMinOldValue(e, eventLogData)).orElseThrow())
+            .map(this::mapToEventLogDto)
+            .collect(Collectors.toList());
+}
+
 private EventLogProjection pickRecordWithMinOldValue(EventLogProjection eventWithMinDate, List<EventLogProjection> eventLogData) {
     String name = eventWithMinDate.getName();
     List<EventLogProjection> eventsWithSameNameAndDay = eventLogData.stream()
