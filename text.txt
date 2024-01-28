@@ -1,0 +1,23 @@
+private EventLogProjection pickRecordWithMinOldValueAndMaxNewValue(List<EventLogProjection> eventsWithSameNamePathAndDay) {
+    Map<String, EventLogProjection> uniqueRecords = new HashMap<>();
+
+    for (EventLogProjection event : eventsWithSameNamePathAndDay) {
+        String key = event.getOldValue();
+        if (uniqueRecords.containsKey(key)) {
+            // Compare event created dates and update the record accordingly
+            EventLogProjection existing = uniqueRecords.get(key);
+            if (event.getEventCreatedDate().compareTo(existing.getEventCreatedDate()) < 0) {
+                uniqueRecords.put(key, event);
+            }
+        } else {
+            uniqueRecords.put(key, event);
+        }
+    }
+
+    // Find the record with the highest newValue based on event created date
+    return uniqueRecords.values().stream()
+        .max(Comparator.comparing(EventLogProjection::getNewValue)
+            .thenComparing(EventLogProjection::getEventCreatedDate,
+                Comparator.nullsLast(Comparator.naturalOrder())))
+        .orElseThrow(); // Handle as per your logic
+}
