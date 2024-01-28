@@ -24,7 +24,7 @@ private Stream<EventLogDto> processDuplicateRecords(List<EventLogProjection> eve
             .values()
             .stream()
             .map(this::pickRecordWithMinOldAndMaxNewValues)
-            .map(this::mapToEventLogDto);
+            .map(event -> mapToEventLogDto(event));
 }
 
 private EventLogDto pickRecordWithMinOldAndMaxNewValues(List<EventLogProjection> eventsWithSamePath) {
@@ -48,6 +48,7 @@ private EventLogDto pickRecordWithMinOldAndMaxNewValues(List<EventLogProjection>
     );
 }
 
+// Lambda expression here
 private EventLogDto mapToEventLogDto(EventLogProjection event) {
     // Your existing mapToEventLogDto logic
 }
