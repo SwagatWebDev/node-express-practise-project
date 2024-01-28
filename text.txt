@@ -1,28 +1,36 @@
-private EventLogProjection pickRecordWithMinOldValueAndMaxNewValue(List<EventLogProjection> eventsWithSameNamePathAndDay) {
+private EventLogProjection pickRecordWithMinOrMaxValueAndMaxEventDate(
+        List<EventLogProjection> eventsWithSameNamePathAndDay,
+        Function<EventLogProjection, String> valueExtractor,
+        BiPredicate<EventLogProjection, EventLogProjection> valueMatcher) {
+
     return eventsWithSameNamePathAndDay.stream()
-            .min(Comparator.comparing(EventLogProjection::getOldValue, Comparator.nullsLast(String::compareTo)))
-            .map(minOldValueEvent ->
+            .min(Comparator.comparing(
+                    valueExtractor,
+                    Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparing(
+                            EventLogProjection::getEventCreatedDate,
+                            Comparator.nullsLast(Comparator.naturalOrder())))
+            .map(minValueEvent ->
                     eventsWithSameNamePathAndDay.stream()
-                            .filter(event -> Objects.equals(event.getNewValue(), minOldValueEvent.getNewValue()))
-                            .max(Comparator.comparing(EventLogProjection::getEventCreatedDate, Comparator.nullsLast(String::compareTo)))
-                            .map(maxNewValueEvent -> {
-                                EventLogProjection result = new EventLogProjection() {
-                                    @Override
-                                    public String getOldValue() {
-                                        return minOldValueEvent.getOldValue();
-                                    }
-
-                                    @Override
-                                    public String getNewValue() {
-                                        return maxNewValueEvent.getNewValue();
-                                    }
-
-                                    // Implement other methods of EventLogProjection
-                                };
-
-                                return result;
-                            })
-                            .orElse(minOldValueEvent)
+                            .filter(event -> valueMatcher.test(event, minValueEvent))
+                            .max(Comparator.comparing(
+                                    EventLogProjection::getEventCreatedDate,
+                                    Comparator.nullsLast(Comparator.naturalOrder())))
+                            .orElseThrow()
             )
             .orElseThrow(); // Handle as per your logic
 }
+
+// Example usage for minOldValue and maxNewValue
+EventLogProjection minOldValueAndMaxNewValueEvent = pickRecordWithMinOrMaxValueAndMaxEventDate(
+        eventsWithSameNamePathAndDay,
+        EventLogProjection::getOldValue,
+        (event, minValueEvent) -> Objects.equals(event.getOldValue(), minValueEvent.getOldValue())
+);
+
+// Example usage for minNewValue and maxNewValue
+EventLogProjection minNewValueAndMaxNewValueEvent = pickRecordWithMinOrMaxValueAndMaxEventDate(
+        eventsWithSameNamePathAndDay,
+        EventLogProjection::getNewValue,
+        (event, minValueEvent) -> Objects.equals(event.getNewValue(), minValueEvent.getNewValue())
+);
