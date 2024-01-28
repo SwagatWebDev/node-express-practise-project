@@ -47,10 +47,3 @@ private EventLogDto pickRecordWithMinOldAndMaxNewValues(List<EventLogProjection>
             minOldValueEvent.getOldValue()
     );
 }
-
-// Lambda expression here
-private EventLogDto mapToEventLogDto(EventLogProjection event) {
-    // Your existing mapToEventLogDto logic
-}
-
-// Your existing getEventType and getProcessedNewValue methods
