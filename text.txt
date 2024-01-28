@@ -1,36 +1,23 @@
-private EventLogProjection pickRecordWithMinOldValueAndMaxNewValue(List<EventLogProjection> eventsWithSameNamePathAndDay) {
-    return eventsWithSameNamePathAndDay.stream()
+private void updateRecordWithMinOldValueAndMaxNewValue(List<EventLogProjection> eventsWithSameNamePathAndDay) {
+    eventsWithSameNamePathAndDay.stream()
             .min(Comparator.comparing(
                     EventLogProjection::getOldValue,
                     Comparator.nullsLast(Comparator.naturalOrder()))
                     .thenComparing(
                             EventLogProjection::getEventCreatedDate,
                             Comparator.nullsLast(Comparator.naturalOrder())))
-            .map(minOldValueEvent ->
-                    eventsWithSameNamePathAndDay.stream()
-                            .filter(event -> Objects.equals(event.getOldValue(), minOldValueEvent.getOldValue()))
-                            .max(Comparator.comparing(
-                                    EventLogProjection::getEventCreatedDate,
-                                    Comparator.nullsLast(Comparator.naturalOrder())))
-                            .orElseThrow()
-            )
-            .map(minOldAndMaxNewValueEvent -> {
-                // Create a new object with the updated values
-                return new CustomEventLogProjection(
-                        minOldAndMaxNewValueEvent.getOldValue(),
-                        // Get the newValue from the record with the highest event created time
-                        eventsWithSameNamePathAndDay.stream()
-                                .filter(event -> Objects.equals(event.getOldValue(), minOldAndMaxNewValueEvent.getOldValue()))
-                                .max(Comparator.comparing(
-                                        EventLogProjection::getEventCreatedDate,
-                                        Comparator.nullsLast(Comparator.naturalOrder())))
-                                .map(EventLogProjection::getNewValue)
-                                .orElse(minOldAndMaxNewValueEvent.getNewValue()),
-                        // Set other fields as needed
-                        minOldAndMaxNewValueEvent.getEventCreatedDate(),
-                        minOldAndMaxNewValueEvent.getSomeOtherField()
-                        // Add other fields as needed
-                );
-            })
-            .orElseThrow(); // Handle as per your logic
+            .ifPresent(minOldValueEvent -> {
+                EventLogProjection maxNewValueEvent = eventsWithSameNamePathAndDay.stream()
+                        .filter(event -> Objects.equals(event.getOldValue(), minOldValueEvent.getOldValue()))
+                        .max(Comparator.comparing(
+                                EventLogProjection::getEventCreatedDate,
+                                Comparator.nullsLast(Comparator.naturalOrder())))
+                        .orElseThrow();
+
+                // Update the existing record with the new values
+                minOldValueEvent.setNewValue(maxNewValueEvent.getNewValue());
+                // Update other fields as needed
+                minOldValueEvent.setEventCreatedDate(maxNewValueEvent.getEventCreatedDate());
+                // Update other fields as needed
+            });
 }
