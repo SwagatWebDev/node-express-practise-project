@@ -1,0 +1,39 @@
+public Page<EventLogDto> getEventLog(Pageable pageable) {
+        Page<EventlogProjection> eventLogData = eventLogRepository.getEventLogData(pageable);
+        List<EventLogDto> combinedEventLogDtoList = getCombinedEventLogDtoList(eventLogData.getContent());
+
+        return new PageImpl<>(combinedEventLogDtoList, pageable, eventLogData.getTotalElements());
+    }
+
+    private List<EventLogDto> getCombinedEventLogDtoList(List<EventLogProjection> eventLogData) {
+        Map<String, Optional<EventLogProjection>> uniqueRecords = eventLogData.stream()
+                .filter(this::isMatchingPath)
+                .collect(Collectors.groupingBy(
+                        event -> event.getName() + event.getEventCreatedDate().substring(0, 10),
+                        Collectors.minBy(Comparator.comparing(EventLogProjection::getEventCreatedDate))
+                ));
+
+        return uniqueRecords.values().stream()
+                .map(optionalEvent -> optionalEvent.map(this::pickRecordWithMinOldValue).orElseThrow())
+                .map(this::mapToEventLogDto)
+                .collect(Collectors.toList());
+    }
+
+    private boolean isMatchingPath(EventLogProjection event) {
+        String path = event.getPath();
+        return "/relSolutionToCapability/usageDisposition".equals(path) ||
+                "/relSolutionToBusinessCapability/usageDisposition".equals(path) ||
+                "/relSolutionToCapability/usageDisposition".equals(path);
+    }
+
+    private EventLogProjection pickRecordWithMinOldValue(EventLogProjection eventWithMinDate) {
+        String name = eventWithMinDate.getName();
+        List<EventLogProjection> eventsWithSameNameAndDay = eventLogData.stream()
+                .filter(event -> event.getName().equals(name) &&
+                        event.getEventCreatedDate().substring(0, 10).equals(eventWithMinDate.getEventCreatedDate().substring(0, 10)))
+                .collect(Collectors.toList());
+
+        return eventsWithSameNameAndDay.stream()
+                .min(Comparator.comparing(EventLogProjection::getOldValue))
+                .orElseThrow();
+    }
