@@ -1,12 +1,11 @@
 List<EventLogDto> result = Stream.concat(
         groupedByNameAndPathAndDay.values().stream()
                 .flatMap(List::stream)
-                .map(this::processGroupedEvents)
-                .filter(eventLogDto -> !Objects.equals(eventLogDto.getOldValue(), eventLogDto.getNewValue())
-                        && StringUtils.isNotEmpty(eventLogDto.getNewValue())),
+                .map(this::processGroupedEvents),
         unMatchedPathResults.stream()
                 .map(this::processUnGroupedEvents)
-                .filter(eventLogDto -> StringUtils.isNotEmpty(eventLogDto.getNewValue()))
 )
+        .filter(event -> !Objects.equals(event.getOldValue(), event.getNewValue())
+                && StringUtils.isNotBlank(event.getNewValue()))
         .sorted(Comparator.comparing(EventLogOto::getEventCreateMate).reversed())
         .collect(Collectors.toList());
