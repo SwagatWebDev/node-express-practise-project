@@ -1,30 +1,39 @@
-.
-input -
-with-icon {
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+.input-container {
     position: relative;
+    width: 300px;
 }
 
-.
-input -
-with-icon input[type = "text"]
-{
-    padding - left
-:
-    30
-    px; /* Adjust this value based on the width of the icon */
+.input-field {
+    padding-left: 30px;
+    width: 100%;
+    height: 40px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    box-sizing: border-box;
 }
 
-.
-input -
-with-icon.fa - search {
+.input-icon {
     position: absolute;
-    left: 10
-    px; /* Adjust this value based on the desired position of the icon */
-    top: 50 %;
-    transform: translateY(-50 %);
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
 }
+</style>
+</head>
+<body>
 
-<div className="input-with-icon">
-    <input type="text" placeholder="Search..." style="width: 100%;" className="font-awesome-placeholder"/>
-    <i className="fas fa-search"></i>
+<div class="input-container">
+    <input type="text" class="input-field" placeholder="Search...">
+        <i class="fas fa-search input-icon"></i>
 </div>
+
+</body>
+</html>
