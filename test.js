@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
+<div className="input-container">
+    <input type="text" className="input-field" placeholder="Search..."/>
+    <em className="fas fa-search input-icon"></em>
+</div>
+
 .input-container {
     position: relative;
     width: 300px;
@@ -26,14 +24,3 @@
     top: 50%;
     transform: translateY(-50%);
 }
-</style>
-</head>
-<body>
-
-<div class="input-container">
-    <input type="text" class="input-field" placeholder="Search...">
-        <i class="fas fa-search input-icon"></i>
-</div>
-
-</body>
-</html>
