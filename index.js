@@ -1,11 +1,20 @@
 require('dotenv').config()
+const mongoose = require('mongoose');
 const express = require('express');
 const morgan = require('morgan');
 const server = express();
 const productRouter = require('./router/product')
 const userRouter = require('./router/user')
 const baseURL = '/api/v1';
-console.log('DB PASSWORD:',process.env.DB_PASSWORD)
+console.log('DB PASSWORD:',process.env.DB_PASSWORD);
+
+//db connection
+main().catch(err => console.log(err));
+
+async function main() {
+    await mongoose.connect('mongodb+srv://swagatmishra:lkQ6cIAeTtyul29m@md-cluster.aifwhrc.mongodb.net/ecommerce');
+    console.log('database connected')
+}
 
 //bodyParser
 server.use(express.json());
