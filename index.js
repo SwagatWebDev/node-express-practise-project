@@ -12,7 +12,7 @@ console.log('DB PASSWORD:',process.env.DB_PASSWORD);
 main().catch(err => console.log(err));
 
 async function main() {
-    await mongoose.connect('mongodb+srv://swagatmishra:lkQ6cIAeTtyul29m@md-cluster.aifwhrc.mongodb.net/ecommerce');
+    await mongoose.connect('mongodb://127.0.0.1:27017/test');
     console.log('database connected')
 }
 
