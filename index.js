@@ -3,25 +3,32 @@ const mongoose = require('mongoose');
 const express = require('express');
 const morgan = require('morgan');
 const server = express();
-const productRouter = require('./router/product')
-const userRouter = require('./router/user')
+const productRouter = require('./router/product');
+const userRouter = require('./router/user');
 const baseURL = '/api/v1';
 console.log('DB PASSWORD:',process.env.DB_PASSWORD);
+const orderRouter = require("./router/order");
+const cors = require('cors');
+const {getUsersWithOrders} = require("./controller/user");
 
 //db connection
 main().catch(err => console.log(err));
 
 async function main() {
-    await mongoose.connect('mongodb://127.0.0.1:27017/test');
+    await mongoose.connect('mongodb://127.0.0.1:27017/ecommerce');
     console.log('database connected')
 }
 
 //bodyParser
+//server.use(cors);
 server.use(express.json());
 server.use(morgan('default'));
 server.use(express.static('public'));
 server.use(baseURL+'/products',productRouter.router);
 server.use(baseURL+'/users',userRouter.router);
+server.use(baseURL+'/orders',orderRouter.router);
+
+server.use(baseURL+ '/user-with-order', getUsersWithOrders);
 
 // 49.37.114.170/32
 //lkQ6cIAeTtyul29m
@@ -30,3 +37,4 @@ server.use(baseURL+'/users',userRouter.router);
 server.listen(process.env.PORT, () => {
     console.log(`Server running on http://localhost:${process.env.PORT}`);
 });
+

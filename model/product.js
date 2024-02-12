@@ -9,6 +9,7 @@ const productSchema = new Schema({
     rating: {type: Number, min:[0,'wrong min rating'], max:[5,'wrong max rating']},
     brand: {type: String,required: true},
     category: {type: String, required: true},
+    isActive: {type: Boolean, required: true},
     thumbnail: {type: String, required: true},
     images: [ String ]
 });
