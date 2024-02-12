@@ -12,12 +12,9 @@ const cors = require('cors');
 const {getUsersWithOrders} = require("./controller/user");
 
 //db connection
-main().catch(err => console.log(err));
-
-async function main() {
-    await mongoose.connect('mongodb://127.0.0.1:27017/ecommerce');
-    console.log('database connected')
-}
+mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('Connected to MongoDB'))
+    .catch(err => console.error('Error connecting to MongoDB:', err));
 
 //bodyParser
 //server.use(cors);

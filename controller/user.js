@@ -53,8 +53,8 @@ exports.getUsersWithOrders = async (req, res) => {
                     localField: '_id',
                     foreignField: 'user',
                     as: 'orders'
-                }
-            }
+                },
+            },
         ]);
         console.log(usersWithOrders)
         res.json(usersWithOrders);

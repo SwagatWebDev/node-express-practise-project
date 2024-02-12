@@ -68,28 +68,6 @@ exports.updatePartialProduct = async (req, res) => {
 
 // Controller function to delete a product by its ID
 exports.deleteProduct = async (req, res) => {
-    try {
-        // Find the user by ID and delete it
-        const deletedProduct = await Product.findByIdAndDelete({}, req.params.id);
-
-        if (!deletedProduct) {
-            return res.status(404).json({ error: 'Product not found' });
-        }
-
-        // Update isActive field of the deleted user (optional)
-        deletedProduct.isActive = false;
-        await deletedProduct.save();
-
-        // Respond with success message
-        res.json({ message: 'Product deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting Product:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-};
-
-/*// Controller function to delete a product by its ID
-exports.deleteProduct = async (req, res) => {
     // Extract the product ID from the request parameters
     const id = req.params.id;
     try {
@@ -101,7 +79,33 @@ exports.deleteProduct = async (req, res) => {
         // If there's an error during the operation, send an error response
         res.status(500).json({ error: 'Server error' });
     }
-};*/
+};
+
+/*// Controller function to delete a product by its ID with isActive Flag
+exports.deleteProduct = async (req, res) => {
+    try {
+        const id = req.params.id;
+        // Find the user by ID and delete it
+        const deletedProduct = await Product.deleteOne({ _id: id });
+
+        if (!deletedProduct) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        // Update isActive field of the deleted user (optional)
+        const updatedResult = await Product.findOneAndUpdate({ _id: id }, req.body, { new: true });
+
+        // Respond with success message
+        res.json(updatedResult);
+    } catch (error) {
+        console.error('Error deleting Product:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+Query to Delete After:
+db.products.deleteMany({ "isActive": false })
+*/
 
 /**
  Deleting or modifying the _id field in MongoDB isn't recommended because it's immutable
