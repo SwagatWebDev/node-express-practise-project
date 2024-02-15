@@ -101,11 +101,6 @@ exports.deleteProduct = async (req, res) => {
         console.error('Error deleting Product:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
-    String replaceDeleted(String input) {
-    return StringUtils.isNotBlank(input) && input.contains("_<deleted>")
-        ? input.replaceAll("_<deleted>", " (deleted)").replaceAll("\\d+$", "")
-        : "Invalid input";
-}
 };
 
 Query to Delete After:
