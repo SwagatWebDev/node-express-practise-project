@@ -6,13 +6,17 @@ ORDER BY
         WHEN r.usage_disposition = 'Emerging' THEN 4
         WHEN r.usage_disposition = 'Decommission' THEN 5
         WHEN r.usage_disposition = 'Prohibited' THEN 6
-        ELSE 7
+        ELSE 7 -- This covers any other values that might appear
     END,
     CASE
-        WHEN s.reuse_model = 'Shared Platform' THEN 1
-        WHEN s.reuse_model = 'Shared System' THEN 2
-        WHEN s.reuse_model = 'Shared Code' THEN 3
-        WHEN s.reuse_model = 'Shared Component' THEN 4
-        ELSE 5
+        WHEN r.usage_disposition IN ('Required', 'Preferred', 'Restricted', 'Emerging', 'Decommission', 'Prohibited') THEN
+            CASE s.reuse_model
+                WHEN 'Shared Platform' THEN 1
+                WHEN 'Shared System' THEN 2
+                WHEN 'Shared Code' THEN 3
+                WHEN 'Shared Component' THEN 4
+                ELSE 5 -- This covers any other values that might appear
+            END
+        ELSE 6 -- This covers any other values that might appear
     END,
     s.name;
