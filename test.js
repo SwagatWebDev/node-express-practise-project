@@ -1,39 +1,10 @@
 ORDER BY
-    CASE 
-        WHEN s.is_core_common = true THEN
-            CASE r.usage_disposition
-                WHEN 'Required' THEN 1
-                WHEN 'Preferred' THEN 2
-                WHEN 'Restricted' THEN 3
-                WHEN 'Emerging' THEN 4
-                WHEN 'Decommission' THEN 5
-                WHEN 'Prohibited' THEN 6
-                ELSE 7
-            END,
-            CASE s.reuse_model
-                WHEN 'Shared Platform' THEN 1
-                WHEN 'Shared System' THEN 2
-                WHEN 'Shared Code' THEN 3
-                WHEN 'Shared Component' THEN 4
-                ELSE 5
-            END,
-            s.name
-        ELSE
-            CASE r.usage_disposition
-                WHEN 'Required' THEN 1
-                WHEN 'Preferred' THEN 2
-                WHEN 'Restricted' THEN 3
-                WHEN 'Emerging' THEN 4
-                WHEN 'Decommission' THEN 5
-                WHEN 'Prohibited' THEN 6
-                ELSE 7
-            END,
-            CASE s.reuse_model
-                WHEN 'Shared Platform' THEN 1
-                WHEN 'Shared System' THEN 2
-                WHEN 'Shared Code' THEN 3
-                WHEN 'Shared Component' THEN 4
-                ELSE 5
-            END,
-            s.name
-    END;
+    s.is_core_common DESC,
+    CASE WHEN s.is_core_common THEN
+        FIND_IN_SET(r.usage_disposition, 'Required,Preferred,Restricted,Emerging,Decommission,Prohibited'),
+        FIND_IN_SET(s.reuse_model, 'Shared Platform,Shared System,Shared Code,Shared Component'),
+        s.name
+    END,
+    r.usage_disposition,
+    s.reuse_model,
+    s.name;
